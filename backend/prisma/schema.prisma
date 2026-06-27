@@ -1,0 +1,51 @@
+// =============================================================================
+// InvoiceGo - Prisma Schema
+// =============================================================================
+// Learn more: https://pris.ly/d/prisma-schema
+//
+// NOTE: Business models (Receipt, Invoice, User, etc.) will be added in
+// future tasks. This file only sets up the Prisma generator and datasource.
+//
+// PRISMA 7 NOTES:
+//   1. The `url` field is no longer declared in the datasource block.
+//      The database connection string is configured exclusively in
+//      `prisma.config.ts` (datasource.url).
+//
+//   2. The generator provider is now "prisma-client" (was "prisma-client-js"
+//      in Prisma v5/v6). This generates a TypeScript-native client.
+//
+//   3. `moduleFormat = "cjs"` is required because NestJS uses CommonJS by
+//      default. Omitting this would cause ESM/CJS interop errors at runtime.
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// Generator
+// ---------------------------------------------------------------------------
+// Outputs the Prisma Client to `src/generated/prisma` so it is co-located
+// with the application source and included in the TypeScript compilation.
+// ---------------------------------------------------------------------------
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+// ---------------------------------------------------------------------------
+// Datasource
+// ---------------------------------------------------------------------------
+// provider : Declares the database type (PostgreSQL).
+//
+// In Prisma 7, the connection URL is NOT declared here. It is set in
+// prisma.config.ts under `datasource.url`. This is a breaking change from
+// Prisma v5/v6 where `url = env("DATABASE_URL")` was required here.
+// ---------------------------------------------------------------------------
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================================
+// Models will be added in future tasks:
+//   - TASK-005: User model
+//   - TASK-006: Receipt model
+//   - TASK-007: Invoice model
+// =============================================================================
