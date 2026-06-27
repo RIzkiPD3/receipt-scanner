@@ -1,0 +1,52 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build and compilation outputs
+dist/
+build/
+bin/
+out/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build outputs and binary files
+worker/worker
+worker/worker.exe
+*.test
+*.out
+*.prof
+
+# NestJS / TypeScript cache
+.tscache/
+*.tsbuildinfo
+
+# Environment variables (Secrets)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+worker/.env
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# IDEs and editors configurations
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
