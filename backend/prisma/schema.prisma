@@ -43,9 +43,104 @@ datasource db {
   provider = "postgresql"
 }
 
-// =============================================================================
-// Models will be added in future tasks:
-//   - TASK-005: User model
-//   - TASK-006: Receipt model
-//   - TASK-007: Invoice model
-// =============================================================================
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum ReceiptStatus {
+  PENDING      // Diunggah, menunggu OCR
+  PROCESSING   // Proses OCR atau AI sedang berjalan
+  PROCESSED    // Berhasil mengekstrak data terstruktur
+  FAILED       // Proses OCR/AI gagal
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  VOID
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phoneNumber String   @unique @map("phone_number") // Nomor telepon WhatsApp unik (misal "+628123456789")
+  name        String?  @db.VarChar(100)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  receipts    Receipt[]
+  invoices    Invoice[]
+
+  @@map("users")
+}
+
+model Receipt {
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String        @map("user_id") @db.Uuid
+  whatsappMessageId  String?       @unique @map("whatsapp_message_id") @db.VarChar(255) // Kunci deduplikasi
+  whatsappMediaId    String?       @map("whatsapp_media_id") @db.VarChar(255)
+  imageUrl           String        @map("image_url") @db.VarChar(2048) // Lokasi gambar struk asli
+  merchantName       String?       @map("merchant_name") @db.VarChar(255)
+  transactionDate    DateTime?     @map("transaction_date")
+  rawText            String?       @map("raw_text") @db.Text // Hasil OCR mentah
+  totalAmount        Decimal?      @map("total_amount") @db.Decimal(12, 2)
+  currency           String?       @map("currency") @db.VarChar(10)
+  status             ReceiptStatus @default(PENDING)
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items              ReceiptItem[]
+  invoice            Invoice?
+
+  @@index([userId])
+  @@index([status])
+  @@map("receipts")
+}
+
+model ReceiptItem {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  receiptId   String   @map("receipt_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  quantity    Decimal  @default(1.00) @db.Decimal(10, 2)
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(12, 2)
+  totalPrice  Decimal  @map("total_price") @db.Decimal(12, 2)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  receipt     Receipt  @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+
+  @@index([receiptId])
+  @@map("receipt_items")
+}
+
+model Invoice {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String        @map("user_id") @db.Uuid
+  receiptId      String?       @unique @map("receipt_id") @db.Uuid // Relasi 1-ke-1 ke struk sumber
+  invoiceNumber  String        @unique @map("invoice_number") @db.VarChar(50) // Contoh: "INV-YYYYMMDD-XXXX"
+  merchantName   String        @map("merchant_name") @db.VarChar(255)
+  issueDate      DateTime      @default(now()) @map("issue_date")
+  dueDate        DateTime?     @map("due_date")
+  status         InvoiceStatus @default(DRAFT)
+  subtotal       Decimal       @db.Decimal(12, 2)
+  taxAmount      Decimal       @default(0.00) @map("tax_amount") @db.Decimal(12, 2)
+  discountAmount Decimal       @default(0.00) @map("discount_amount") @db.Decimal(12, 2)
+  totalAmount    Decimal       @map("total_amount") @db.Decimal(12, 2)
+  currency       String        @default("USD") @db.VarChar(10)
+  pdfUrl         String?       @map("pdf_url") @db.VarChar(2048) // Lokasi file PDF hasil generate
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  receipt        Receipt?      @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@map("invoices")
+}

@@ -1,0 +1,62 @@
+package config
+
+import (
+	"bufio"
+	"os"
+	"strings"
+)
+
+type Config struct {
+	Port               string
+	Env                string
+	AiServiceApiKey    string
+	AiModelName        string
+	BackendCallbackUrl string
+}
+
+func LoadConfig() (*Config, error) {
+	// Muat berkas .env jika ada
+	_ = loadEnvFile(".env")
+
+	return &Config{
+		Port:               getEnv("PORT", "8080"),
+		Env:                getEnv("ENV", "development"),
+		AiServiceApiKey:    getEnv("AI_SERVICE_API_KEY", ""),
+		AiModelName:        getEnv("AI_MODEL_NAME", "gemini-1.5-flash"),
+		BackendCallbackUrl: getEnv("BACKEND_CALLBACK_URL", "http://localhost:3000/api/v1/receipts/callback"),
+	}, nil
+}
+
+func getEnv(key, defaultVal string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
+	}
+	return defaultVal
+}
+
+func loadEnvFile(filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+		if len(line) == 0 || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+		// Hapus tanda kutip jika ada
+		val = strings.Trim(val, `"'`)
+		_ = os.Setenv(key, val)
+	}
+	return scanner.Err()
+}

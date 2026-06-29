@@ -51,7 +51,10 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-
+  User: 'User',
+  Receipt: 'Receipt',
+  ReceiptItem: 'ReceiptItem',
+  Invoice: 'Invoice'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -68,4 +71,94 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 } as const)
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
+
+
+export const UserScalarFieldEnum = {
+  id: 'id',
+  phoneNumber: 'phoneNumber',
+  name: 'name',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const ReceiptScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  whatsappMessageId: 'whatsappMessageId',
+  whatsappMediaId: 'whatsappMediaId',
+  imageUrl: 'imageUrl',
+  merchantName: 'merchantName',
+  transactionDate: 'transactionDate',
+  rawText: 'rawText',
+  totalAmount: 'totalAmount',
+  currency: 'currency',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ReceiptScalarFieldEnum = (typeof ReceiptScalarFieldEnum)[keyof typeof ReceiptScalarFieldEnum]
+
+
+export const ReceiptItemScalarFieldEnum = {
+  id: 'id',
+  receiptId: 'receiptId',
+  name: 'name',
+  quantity: 'quantity',
+  unitPrice: 'unitPrice',
+  totalPrice: 'totalPrice',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ReceiptItemScalarFieldEnum = (typeof ReceiptItemScalarFieldEnum)[keyof typeof ReceiptItemScalarFieldEnum]
+
+
+export const InvoiceScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  receiptId: 'receiptId',
+  invoiceNumber: 'invoiceNumber',
+  merchantName: 'merchantName',
+  issueDate: 'issueDate',
+  dueDate: 'dueDate',
+  status: 'status',
+  subtotal: 'subtotal',
+  taxAmount: 'taxAmount',
+  discountAmount: 'discountAmount',
+  totalAmount: 'totalAmount',
+  currency: 'currency',
+  pdfUrl: 'pdfUrl',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type InvoiceScalarFieldEnum = (typeof InvoiceScalarFieldEnum)[keyof typeof InvoiceScalarFieldEnum]
+
+
+export const SortOrder = {
+  asc: 'asc',
+  desc: 'desc'
+} as const
+
+export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+} as const
+
+export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
