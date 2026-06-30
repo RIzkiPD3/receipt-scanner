@@ -4,6 +4,7 @@ import { WebhookService } from './webhook.service';
 import { WhatsAppParser } from './whatsapp-parser.service';
 import { WhatsAppGraphClient } from './client/whatsapp-graph.client';
 import { WhatsAppMediaService } from './services/whatsapp-media.service';
+import { StorageModule } from '../storage/storage.module';
 
 // =============================================================================
 // WhatsAppModule
@@ -19,9 +20,14 @@ import { WhatsAppMediaService } from './services/whatsapp-media.service';
 // Ekspansi di TASK-009:
 //   - WhatsAppGraphClient (koneksi API Graph) → ditambahkan ke providers
 //   - WhatsAppMediaService (manajemen file lokal) → ditambahkan ke providers
+//
+// Ekspansi di TASK-010:
+//   - StorageModule → diimport agar STORAGE_PROVIDER token tersedia
+//     untuk WhatsAppMediaService (Dependency Inversion pada penyimpanan).
 // =============================================================================
 
 @Module({
+  imports: [StorageModule],
   controllers: [WebhookController],
   providers: [
     WebhookService,
@@ -37,3 +43,4 @@ import { WhatsAppMediaService } from './services/whatsapp-media.service';
   ],
 })
 export class WhatsAppModule {}
+

@@ -43,6 +43,13 @@ export const envValidationSchema = Joi.object({
   // Worker Service
   // ---------------------------------------------------------------------------
   WORKER_SERVICE_URL: Joi.string().uri().required(),
+  WORKER_TIMEOUT_MS: Joi.number().default(5000),
+  WORKER_MAX_RETRIES: Joi.number().default(3),
+
+  // ---------------------------------------------------------------------------
+  // Application URL — base untuk static assets (uploads)
+  // ---------------------------------------------------------------------------
+  APP_URL: Joi.string().uri().default('http://localhost:3000'),
 
   // ---------------------------------------------------------------------------
   // Temporary Uploads

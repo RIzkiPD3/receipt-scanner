@@ -1,21 +1,31 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import type { DownloadedFileMetadata } from '../interfaces/downloaded-file.interface';
+import type { StorageProvider } from '../../storage/interfaces/storage-provider.interface';
+import { STORAGE_PROVIDER } from '../../storage/storage.constants';
 import { WhatsAppGraphClient } from '../client/whatsapp-graph.client';
-import { DownloadedFileMetadata } from '../interfaces/downloaded-file.interface';
-import * as fs from 'fs';
-import * as path from 'path';
 
 // =============================================================================
 // WhatsAppMediaService
 // =============================================================================
 // Mengelola alur logika bisnis pengunduhan media WhatsApp.
 //
-// Alur:
+// Alur (diperbarui di TASK-010):
 //   1. Meminta metadata media via WhatsAppGraphClient
 //   2. Memvalidasi bahwa media bertipe gambar (hanya image/* yang diterima)
-//   3. Membuat folder penyimpanan sementara (TEMP_UPLOAD_DIR) jika belum ada
-//   4. Mengunduh data biner berkas
-//   5. Menulis biner ke file lokal menggunakan format penamaan {mediaId}.{ext}
+//   3. Mengunduh data biner berkas
+//   4. Menyimpan file via StorageProvider (abstraksi — lokal atau cloud)
+//   5. Mengembalikan metadata file yang disimpan beserta URL publiknya
+//
+// Perubahan TASK-010:
+//   - Tidak lagi menggunakan fs.promises.writeFile secara langsung.
+//   - Bergantung pada StorageProvider (Dependency Inversion), sehingga
+//     dapat dipindah ke S3/MinIO tanpa mengubah file ini.
 // =============================================================================
 
 @Injectable()
@@ -24,84 +34,84 @@ export class WhatsAppMediaService {
 
   constructor(
     private readonly graphClient: WhatsAppGraphClient,
-    private readonly configService: ConfigService,
+    @Inject(STORAGE_PROVIDER)
+    private readonly storageProvider: StorageProvider,
   ) {}
 
   /**
-   * Mengunduh file media struk dari WhatsApp dan menyimpannya secara lokal.
+   * Mengunduh file media struk dari WhatsApp dan menyimpannya via StorageProvider.
    *
    * @param mediaId ID Media unik dari WhatsApp Cloud API
-   * @returns Metadata dari file yang berhasil disimpan
+   * @returns Metadata dari file yang berhasil disimpan, termasuk URL publik
    */
   async downloadMedia(mediaId: string): Promise<DownloadedFileMetadata> {
-    this.logger.log(`Memulai proses pengunduhan media untuk ID: ${mediaId}`, WhatsAppMediaService.name);
+    this.logger.log(
+      `Memulai proses pengunduhan media untuk ID: ${mediaId}`,
+      WhatsAppMediaService.name,
+    );
 
     if (!mediaId) {
       throw new BadRequestException('Media ID wajib diisi.');
     }
 
     // 1. Ambil metadata media dari Meta Graph API
-    let metadata;
+    let metadata: { url: string; mime_type: string; file_size: number; id: string };
     try {
       metadata = await this.graphClient.getMediaMetadata(mediaId);
     } catch (error) {
-      this.logger.error(`Gagal mendapatkan metadata untuk Media ID: ${mediaId}`, error.stack);
+      this.logger.error(
+        `Gagal mendapatkan metadata untuk Media ID: ${mediaId}`,
+        error.stack,
+      );
       throw new NotFoundException(
         `Media dengan ID ${mediaId} tidak ditemukan atau token akses tidak valid.`,
       );
     }
 
-    // 2. Validasi tipe media (Sistem hanya menerima file gambar untuk struk belanja)
+    // 2. Validasi tipe media (hanya menerima gambar untuk struk belanja)
     if (!metadata.mime_type || !metadata.mime_type.startsWith('image/')) {
       this.logger.warn(
         `Penolakan media: tipe ${metadata.mime_type || 'unknown'} tidak didukung.`,
         WhatsAppMediaService.name,
       );
       throw new BadRequestException(
-        `Format file tidak didukung (${metadata.mime_type || 'unknown'}). Sistem hanya menerima file gambar (JPEG, PNG, dll.) untuk struk belanja.`,
+        `Format file tidak didukung (${metadata.mime_type || 'unknown'}). Sistem hanya menerima file gambar untuk struk belanja.`,
       );
     }
 
-    // 3. Pastikan folder penyimpanan sementara ada
-    const tempDir = this.configService.get<string>('TEMP_UPLOAD_DIR') || 'temp/uploads';
-    try {
-      await fs.promises.mkdir(tempDir, { recursive: true });
-    } catch (error) {
-      this.logger.error(
-        `Gagal membuat folder penyimpanan sementara di path: ${tempDir}`,
-        error.stack,
-        WhatsAppMediaService.name,
-      );
-      throw error;
-    }
-
-    // 4. Unduh konten binary media
+    // 3. Unduh konten binary media
     let arrayBuffer: ArrayBuffer;
     try {
       arrayBuffer = await this.graphClient.downloadMediaStream(metadata.url);
     } catch (error) {
-      this.logger.error(`Gagal mengunduh file binary untuk Media ID: ${mediaId}`, error.stack);
+      this.logger.error(
+        `Gagal mengunduh file binary untuk Media ID: ${mediaId}`,
+        error.stack,
+      );
       throw error;
     }
 
-    // 5. Tentukan extension berkas & simpan ke disk
-    // Contoh: "image/jpeg" -> "jpeg", "image/png" -> "png"
+    // 4. Tentukan nama berkas dan simpan via StorageProvider
+    // Format: {mediaId}.{ext} → Contoh: MEDIA_ID_123.jpeg
     const ext = metadata.mime_type.split('/')[1] || 'jpg';
     const filename = `${mediaId}.${ext}`;
-    const localPath = path.join(tempDir, filename);
+    const buffer = Buffer.from(arrayBuffer);
 
+    let localPath: string;
     try {
-      const buffer = Buffer.from(arrayBuffer);
-      await fs.promises.writeFile(localPath, buffer);
+      localPath = await this.storageProvider.upload(
+        buffer,
+        filename,
+        metadata.mime_type,
+      );
       this.logger.log(
-        `Berkas berhasil diunduh dan disimpan di: ${localPath} (${metadata.file_size} bytes)`,
+        `Berkas berhasil disimpan via StorageProvider: ${localPath} (${metadata.file_size} bytes)`,
         WhatsAppMediaService.name,
       );
     } catch (error) {
       this.logger.error(
-        `Gagal menulis berkas biner ke lokal disk: ${localPath}`,
+        `Gagal menyimpan berkas via StorageProvider untuk Media ID: ${mediaId}`,
         error.stack,
-        WhatsAppMediaService.name,
       );
       throw error;
     }

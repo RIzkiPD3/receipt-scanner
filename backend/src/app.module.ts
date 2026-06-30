@@ -5,6 +5,8 @@ import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './database';
 import { HealthModule } from './modules/health/health.module';
 import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
+import { StorageModule } from './modules/storage/storage.module';
+import { WorkerModule } from './modules/worker/worker.module';
 
 // =============================================================================
 // AppModule — Root Application Module
@@ -12,7 +14,9 @@ import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 // Import order follows dependency layering:
 //   1. ConfigModule   — must be first so env vars are available globally
 //   2. PrismaModule   — database layer, global scope (no need to re-import)
-//   3. Feature modules — depend on config & database
+//   3. StorageModule  — storage abstraction layer (TASK-010)
+//   4. WorkerModule   — komunikasi dengan Golang Worker (TASK-010)
+//   5. Feature modules — depend on config & database
 // =============================================================================
 
 @Module({
@@ -37,20 +41,33 @@ import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
     PrismaModule,
 
     // -------------------------------------------------------------------------
+    // Infrastructure Modules (TASK-010)
+    // -------------------------------------------------------------------------
+    // StorageModule — menyediakan STORAGE_PROVIDER (LocalStorageProvider)
+    //                 sebagai abstraksi penyimpanan file yang dapat diganti
+    //                 ke S3/MinIO/GCS tanpa mengubah kode bisnis.
+    StorageModule,
+
+    // WorkerModule — menyediakan WorkerClient untuk berkomunikasi dengan
+    //               Golang Worker via HTTP REST (dengan retry + timeout).
+    WorkerModule,
+
+    // -------------------------------------------------------------------------
     // Feature Modules
     // -------------------------------------------------------------------------
     HealthModule,
 
     // WhatsAppModule — handles Meta webhook verification & incoming events
-    // Implemented in TASK-007
+    // Implemented in TASK-007, expanded in TASK-009 & TASK-010
     WhatsAppModule,
 
     // Future modules will be added here:
-    //   ReceiptsModule    (TASK-008)
-    //   InvoicesModule    (TASK-009)
+    //   ReceiptsModule    (TASK-011)
+    //   InvoicesModule    (TASK-012)
   ],
   controllers: [AppController],
   providers: [],
 })
 export class AppModule {}
+
 
