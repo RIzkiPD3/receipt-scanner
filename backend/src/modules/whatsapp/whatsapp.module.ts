@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { WebhookController } from './webhook.controller';
 import { WebhookService } from './webhook.service';
 import { WhatsAppParser } from './whatsapp-parser.service';
+import { WhatsAppGraphClient } from './client/whatsapp-graph.client';
+import { WhatsAppMediaService } from './services/whatsapp-media.service';
 
 // =============================================================================
 // WhatsAppModule
@@ -14,14 +16,24 @@ import { WhatsAppParser } from './whatsapp-parser.service';
 //   langsung dapat diinjeksikan ke WebhookService.
 // - PrismaModule TIDAK di-import karena TASK-007 tidak menyentuh database.
 //
-// Ekspansi di task selanjutnya:
-//   - WhatsAppSenderService (pengiriman pesan) → tambahkan ke providers
-//   - MediaService (download media) → tambahkan sebagai sub-module atau provider
+// Ekspansi di TASK-009:
+//   - WhatsAppGraphClient (koneksi API Graph) → ditambahkan ke providers
+//   - WhatsAppMediaService (manajemen file lokal) → ditambahkan ke providers
 // =============================================================================
 
 @Module({
   controllers: [WebhookController],
-  providers: [WebhookService, WhatsAppParser],
-  exports: [WebhookService, WhatsAppParser],
+  providers: [
+    WebhookService,
+    WhatsAppParser,
+    WhatsAppGraphClient,
+    WhatsAppMediaService,
+  ],
+  exports: [
+    WebhookService,
+    WhatsAppParser,
+    WhatsAppGraphClient,
+    WhatsAppMediaService,
+  ],
 })
 export class WhatsAppModule {}
