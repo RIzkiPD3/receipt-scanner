@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"invoicego/worker/internal/config"
 	"invoicego/worker/internal/handler"
+	"invoicego/worker/internal/ocr"
+	"invoicego/worker/internal/service"
 	"log/slog"
 	"net/http"
 	"os"
@@ -40,27 +42,32 @@ func main() {
 
 	logger.Info("InvoiceGo Golang Worker starting...", "env", cfg.Env, "port", cfg.Port)
 
-	// 3. Inisialisasi handler dengan dependency injection logger
-	healthHandler := handler.NewHealthHandler(logger)
-	receiptHandler := handler.NewReceiptHandler(logger)
+	// 3. Inisialisasi OCR Provider (Tesseract CLI) dan OCR Service
+	logger.Info("Menginisialisasi sistem OCR...", "tesseractPath", cfg.TesseractPath, "tempDownloadDir", cfg.TempDownloadDir)
+	ocrProvider := ocr.NewTesseractProvider(cfg.TesseractPath, logger)
+	ocrService := service.NewOCRService(ocrProvider, cfg.TempDownloadDir, logger)
 
-	// 4. Daftarkan routes ke ServeMux
+	// 4. Inisialisasi handler dengan dependency injection
+	healthHandler := handler.NewHealthHandler(logger)
+	receiptHandler := handler.NewReceiptHandler(ocrService, logger)
+
+	// 5. Daftarkan routes ke ServeMux
 	// Go 1.22+ mendukung method pattern seperti "GET /health"
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", healthHandler)
 	mux.Handle("POST /process-receipt", receiptHandler)
 
-	// 5. Konfigurasi HTTP server yang siap produksi
+	// 6. Konfigurasi HTTP server yang siap produksi
 	// ReadTimeout & WriteTimeout mencegah koneksi menggantung selamanya
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      mux,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  30 * time.Second, // Ditingkatkan ke 30s karena proses OCR gambar bisa memakan waktu
+		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// 6. Jalankan server di goroutine terpisah agar tidak memblokir
+	// 7. Jalankan server di goroutine terpisah agar tidak memblokir
 	serverErrors := make(chan error, 1)
 	go func() {
 		logger.Info("HTTP server mendengarkan...", "address", server.Addr)
@@ -69,7 +76,7 @@ func main() {
 		}
 	}()
 
-	// 7. Graceful Shutdown
+	// 8. Graceful Shutdown
 	// Dengarkan sinyal OS (CTRL+C atau sinyal termination dari orchestrator seperti Docker/K8s)
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)

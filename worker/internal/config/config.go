@@ -12,6 +12,8 @@ type Config struct {
 	AiServiceApiKey    string
 	AiModelName        string
 	BackendCallbackUrl string
+	TesseractPath      string
+	TempDownloadDir    string
 }
 
 func LoadConfig() (*Config, error) {
@@ -24,6 +26,8 @@ func LoadConfig() (*Config, error) {
 		AiServiceApiKey:    getEnv("AI_SERVICE_API_KEY", ""),
 		AiModelName:        getEnv("AI_MODEL_NAME", "gemini-1.5-flash"),
 		BackendCallbackUrl: getEnv("BACKEND_CALLBACK_URL", "http://localhost:3000/api/v1/receipts/callback"),
+		TesseractPath:      getEnv("TESSERACT_PATH", "tesseract"),
+		TempDownloadDir:    getEnv("TEMP_DOWNLOAD_DIR", "temp/downloads"),
 	}, nil
 }
 

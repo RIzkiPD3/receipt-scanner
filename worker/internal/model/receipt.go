@@ -8,8 +8,11 @@ type ProcessReceiptRequest struct {
 
 // ProcessReceiptResponse adalah struktur response untuk endpoint POST /process-receipt
 type ProcessReceiptResponse struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
+	Status     string  `json:"status"`
+	Message    string  `json:"message,omitempty"`
+	Text       string  `json:"text,omitempty"`
+	Confidence float64 `json:"confidence,omitempty"`
+	Error      string  `json:"error,omitempty"`
 }
 
 // HealthResponse adalah struktur response untuk endpoint GET /health
