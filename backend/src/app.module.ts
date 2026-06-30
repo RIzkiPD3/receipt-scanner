@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './database';
 import { HealthModule } from './modules/health/health.module';
+import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 
 // =============================================================================
 // AppModule — Root Application Module
@@ -39,12 +40,17 @@ import { HealthModule } from './modules/health/health.module';
     // Feature Modules
     // -------------------------------------------------------------------------
     HealthModule,
+
+    // WhatsAppModule — handles Meta webhook verification & incoming events
+    // Implemented in TASK-007
+    WhatsAppModule,
+
     // Future modules will be added here:
-    //   WhatsAppModule    (TASK-005)
-    //   ReceiptsModule    (TASK-006)
-    //   InvoicesModule    (TASK-007)
+    //   ReceiptsModule    (TASK-008)
+    //   InvoicesModule    (TASK-009)
   ],
   controllers: [AppController],
   providers: [],
 })
 export class AppModule {}
+
