@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { WhatsAppWebhookPayload } from './interfaces/webhook-payload.interface';
+import type { WhatsAppWebhookPayload } from './interfaces/webhook-payload.interface';
+import { WhatsAppParser } from './whatsapp-parser.service';
 
 // =============================================================================
 // WebhookService
@@ -9,16 +10,19 @@ import { WhatsAppWebhookPayload } from './interfaces/webhook-payload.interface';
 //   1. Memverifikasi token saat Meta melakukan handshake webhook (GET)
 //   2. Menerima dan mem-log event webhook masuk (POST)
 //
-// Service ini sengaja TIDAK melakukan pemrosesan bisnis apapun di TASK-007.
-// Method handleWebhookEvent() hanya melakukan parsing dan logging terstruktur,
-// sebagai fondasi untuk hook di task-task selanjutnya.
+// Di TASK-008, Service ini menggunakan WhatsAppParser untuk menyaring dan
+// mengurai payload menjadi objek internal IncomingMessage, lalu mencatatnya
+// ke logger.
 // =============================================================================
 
 @Injectable()
 export class WebhookService {
   private readonly logger = new Logger(WebhookService.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly parser: WhatsAppParser,
+  ) {}
 
   // ---------------------------------------------------------------------------
   // verifyWebhook
@@ -85,29 +89,26 @@ export class WebhookService {
       return;
     }
 
-    // Iterasi setiap entry (bisa lebih dari satu dalam satu payload)
+    // Panggil Parser untuk mengurai data pesan masuk
+    const parsedMessages = this.parser.parse(payload);
+    for (const msg of parsedMessages) {
+      this.logger.log(
+        `[Parsed Message] Tipe: ${msg.type.toUpperCase()} | Pengirim: ${msg.from} | MsgID: ${msg.messageId}`,
+        WebhookService.name,
+      );
+      this.logger.debug(
+        `Detail Pesan Terurai: ${JSON.stringify(msg)}`,
+        WebhookService.name,
+      );
+    }
+
+    // Iterasi setiap entry (bisa lebih dari satu dalam satu payload) untuk status & error
     for (const entry of payload.entry ?? []) {
       for (const change of entry.changes ?? []) {
         const { value } = change;
 
         if (!value) {
           continue;
-        }
-
-        // --- Event: Pesan Masuk ---
-        if (value.messages && value.messages.length > 0) {
-          for (const message of value.messages) {
-            this.logger.log(
-              `📨 Incoming message — from: ${message.from}, type: ${message.type}, messageId: ${message.id}`,
-              WebhookService.name,
-            );
-
-            // Log konten hanya di level DEBUG (tidak aktif di production)
-            this.logger.debug(
-              `Message detail: ${JSON.stringify(message)}`,
-              WebhookService.name,
-            );
-          }
         }
 
         // --- Event: Status Update (sent/delivered/read/failed) ---

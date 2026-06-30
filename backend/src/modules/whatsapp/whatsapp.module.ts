@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { WebhookController } from './webhook.controller';
 import { WebhookService } from './webhook.service';
+import { WhatsAppParser } from './whatsapp-parser.service';
 
 // =============================================================================
 // WhatsAppModule
@@ -20,7 +21,7 @@ import { WebhookService } from './webhook.service';
 
 @Module({
   controllers: [WebhookController],
-  providers: [WebhookService],
-  exports: [WebhookService],
+  providers: [WebhookService, WhatsAppParser],
+  exports: [WebhookService, WhatsAppParser],
 })
 export class WhatsAppModule {}
