@@ -2,26 +2,23 @@ package handler
 
 import (
 	"encoding/json"
-	llmservice "invoicego/worker/internal/llm/service"
 	"invoicego/worker/internal/model"
-	"invoicego/worker/internal/service"
+	"invoicego/worker/internal/processing"
 	"log/slog"
 	"net/http"
 )
 
 // ReceiptHandler menangani permintaan POST /process-receipt
 type ReceiptHandler struct {
-	ocrService *service.OCRService
-	llmService *llmservice.LLMService
-	logger     *slog.Logger
+	processingService *processing.ProcessingService
+	logger            *slog.Logger
 }
 
 // NewReceiptHandler membuat instance baru ReceiptHandler dengan dependency injection
-func NewReceiptHandler(ocrService *service.OCRService, llmService *llmservice.LLMService, logger *slog.Logger) *ReceiptHandler {
+func NewReceiptHandler(processingService *processing.ProcessingService, logger *slog.Logger) *ReceiptHandler {
 	return &ReceiptHandler{
-		ocrService: ocrService,
-		llmService: llmService,
-		logger:     logger,
+		processingService: processingService,
+		logger:            logger,
 	}
 }
 
@@ -29,7 +26,7 @@ func NewReceiptHandler(ocrService *service.OCRService, llmService *llmservice.LL
 func (h *ReceiptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var req model.ProcessReceiptRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.logger.Error("gagal mendekode body request", "error", err)
+		h.logger.Error("Gagal mendekode body request", "error", err)
 		h.sendJSON(w, http.StatusBadRequest, model.ProcessReceiptResponse{
 			Status:  "error",
 			Message: "invalid request body",
@@ -38,7 +35,7 @@ func (h *ReceiptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.ReceiptID == "" || req.ImageURL == "" {
-		h.logger.Warn("validasi gagal: receiptId atau imageUrl kosong",
+		h.logger.Warn("Validasi gagal: receiptId atau imageUrl kosong",
 			"receiptId", req.ReceiptID,
 			"imageUrl", req.ImageURL,
 		)
@@ -49,15 +46,20 @@ func (h *ReceiptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logger.Info("permintaan pemrosesan struk diterima untuk OCR dan LLM",
+	h.logger.Info("Permintaan pemrosesan struk diterima",
 		"receiptId", req.ReceiptID,
 		"imageUrl", req.ImageURL,
 	)
 
-	// Panggil service untuk memproses struk dengan OCR
-	ocrResult, err := h.ocrService.ProcessReceipt(r.Context(), req.ReceiptID, req.ImageURL)
+	result, err := h.processingService.Run(r.Context(), processing.PipelineInput{
+		ReceiptID: req.ReceiptID,
+		ImageURL:  req.ImageURL,
+	})
 	if err != nil {
-		h.logger.Error("Gagal memproses struk dengan OCR", "receiptId", req.ReceiptID, "error", err.Error())
+		h.logger.Error("Pipeline pemrosesan struk gagal",
+			"receiptId", req.ReceiptID,
+			"error", err.Error(),
+		)
 		h.sendJSON(w, http.StatusInternalServerError, model.ProcessReceiptResponse{
 			Status: "error",
 			Error:  err.Error(),
@@ -65,31 +67,12 @@ func (h *ReceiptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logger.Info("Pemrosesan struk dengan OCR berhasil diselesaikan, memulai ekstraksi LLM",
-		"receiptId", req.ReceiptID,
-		"confidence", ocrResult.Confidence,
-	)
-
-	// Ubah teks OCR menjadi data struk belanja terstruktur
-	receiptResult, err := h.llmService.ProcessReceiptText(r.Context(), ocrResult.Text)
-	if err != nil {
-		h.logger.Error("Gagal mengubah teks OCR menjadi data terstruktur", "receiptId", req.ReceiptID, "error", err.Error())
-		h.sendJSON(w, http.StatusInternalServerError, model.ProcessReceiptResponse{
-			Status: "error",
-			Error:  err.Error(),
-		})
-		return
-	}
-
-	h.logger.Info("Pemrosesan struk dengan LLM berhasil diselesaikan",
-		"receiptId", req.ReceiptID,
-	)
+	h.logger.Info("Pipeline pemrosesan struk berhasil diselesaikan", "receiptId", req.ReceiptID)
 
 	h.sendJSON(w, http.StatusOK, model.ProcessReceiptResponse{
-		Status:     "success",
-		Text:       ocrResult.Text,
-		Confidence: ocrResult.Confidence,
-		Receipt:    receiptResult,
+		Status:  "success",
+		Text:    result.RawText,
+		Receipt: result.Receipt,
 	})
 }
 

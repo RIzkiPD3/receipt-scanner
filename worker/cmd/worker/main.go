@@ -7,9 +7,9 @@ import (
 	"invoicego/worker/internal/config"
 	"invoicego/worker/internal/handler"
 	llmprovider "invoicego/worker/internal/llm/provider"
-	llmservice "invoicego/worker/internal/llm/service"
-	"invoicego/worker/internal/ocr"
-	"invoicego/worker/internal/service"
+	ocrprovider "invoicego/worker/internal/ocr/provider"
+	ocrservice "invoicego/worker/internal/ocr/service"
+	"invoicego/worker/internal/processing"
 	"log/slog"
 	"net/http"
 	"os"
@@ -27,54 +27,56 @@ func main() {
 	}
 
 	// 2. Setup structured logging
-	// Mode production → JSON (mudah di-parse oleh log aggregator)
-	// Mode development → teks berwarna (mudah dibaca manusia)
 	var logHandler slog.Handler
 	if cfg.Env == "production" {
-		logHandler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelInfo,
-		})
+		logHandler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
 	} else {
-		logHandler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelDebug,
-		})
+		logHandler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
 	}
 	logger := slog.New(logHandler)
 	slog.SetDefault(logger)
 
 	logger.Info("InvoiceGo Golang Worker starting...", "env", cfg.Env, "port", cfg.Port)
 
-	// 3. Inisialisasi OCR Provider (Tesseract CLI) dan OCR Service
-	logger.Info("Menginisialisasi sistem OCR...", "tesseractPath", cfg.TesseractPath, "tempDownloadDir", cfg.TempDownloadDir)
-	ocrProvider := ocr.NewTesseractProvider(cfg.TesseractPath, logger)
-	ocrService := service.NewOCRService(ocrProvider, cfg.TempDownloadDir, logger)
+	// 3. Inisialisasi OCR Provider (Tesseract CLI)
+	logger.Info("Menginisialisasi Tesseract OCR Provider...",
+		"tesseractPath", cfg.TesseractPath,
+		"tempDownloadDir", cfg.TempDownloadDir,
+	)
+	tesseractProvider := ocrprovider.NewTesseractProvider(cfg.TesseractPath, logger)
 
-	// Inisialisasi LLM Provider dan LLM Service
-	logger.Info("Menginisialisasi sistem LLM Nemotron...", "baseUrl", cfg.NvidiaBaseUrl, "model", cfg.NvidiaModel)
-	llmProvider := llmprovider.NewNemotronProvider(cfg.NvidiaApiKey, cfg.NvidiaBaseUrl, cfg.NvidiaModel, nil, logger)
-	llmService := llmservice.NewLLMService(llmProvider, logger)
+	// 4. Inisialisasi OCR Service (download + OCR)
+	ocrSvc := ocrservice.NewOCRService(tesseractProvider, cfg.TempDownloadDir, logger)
 
-	// 4. Inisialisasi handler dengan dependency injection
+	// 5. Inisialisasi LLM Provider (NVIDIA Nemotron)
+	logger.Info("Menginisialisasi NVIDIA Nemotron LLM Provider...",
+		"baseUrl", cfg.NvidiaBaseUrl,
+		"model", cfg.NvidiaModel,
+	)
+	llmProv := llmprovider.NewNemotronProvider(cfg.NvidiaApiKey, cfg.NvidiaBaseUrl, cfg.NvidiaModel, nil, logger)
+
+	// 6. Inisialisasi Processing Service (pipeline OCR → LLM)
+	processingSvc := processing.NewProcessingService(ocrSvc, llmProv, logger)
+
+	// 7. Inisialisasi handler dengan dependency injection
 	healthHandler := handler.NewHealthHandler(logger)
-	receiptHandler := handler.NewReceiptHandler(ocrService, llmService, logger)
+	receiptHandler := handler.NewReceiptHandler(processingSvc, logger)
 
-	// 5. Daftarkan routes ke ServeMux
-	// Go 1.22+ mendukung method pattern seperti "GET /health"
+	// 8. Daftarkan routes ke ServeMux
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", healthHandler)
 	mux.Handle("POST /process-receipt", receiptHandler)
 
-	// 6. Konfigurasi HTTP server yang siap produksi
-	// ReadTimeout & WriteTimeout mencegah koneksi menggantung selamanya
+	// 9. Konfigurasi HTTP server
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      mux,
-		ReadTimeout:  30 * time.Second, // Ditingkatkan ke 30s karena proses OCR gambar bisa memakan waktu
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		ReadTimeout:  60 * time.Second, // Diperpanjang karena pipeline OCR + LLM bisa memakan waktu
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
 
-	// 7. Jalankan server di goroutine terpisah agar tidak memblokir
+	// 10. Jalankan server di goroutine terpisah
 	serverErrors := make(chan error, 1)
 	go func() {
 		logger.Info("HTTP server mendengarkan...", "address", server.Addr)
@@ -83,21 +85,19 @@ func main() {
 		}
 	}()
 
-	// 8. Graceful Shutdown
-	// Dengarkan sinyal OS (CTRL+C atau sinyal termination dari orchestrator seperti Docker/K8s)
+	// 11. Graceful Shutdown
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
 	select {
 	case err := <-serverErrors:
-		logger.Error("Terjadi error pada server, keluar...", "error", err)
+		logger.Error("Terjadi error pada server", "error", err)
 		os.Exit(1)
 
 	case sig := <-shutdown:
 		logger.Info("Sinyal shutdown diterima", "signal", sig.String())
 
-		// Beri batas waktu 5 detik untuk menyelesaikan request yang sedang berjalan
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		logger.Info("Menutup HTTP server secara graceful...")
