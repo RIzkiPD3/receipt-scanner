@@ -94,6 +94,8 @@ export const ReceiptScalarFieldEnum = {
   transactionDate: 'transactionDate',
   rawText: 'rawText',
   totalAmount: 'totalAmount',
+  subtotal: 'subtotal',
+  tax: 'tax',
   currency: 'currency',
   status: 'status',
   createdAt: 'createdAt',

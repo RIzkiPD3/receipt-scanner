@@ -7,6 +7,7 @@ import { HealthModule } from './modules/health/health.module';
 import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { WorkerModule } from './modules/worker/worker.module';
+import { ReceiptsModule } from './modules/receipts/receipts.module';
 
 // =============================================================================
 // AppModule — Root Application Module
@@ -61,9 +62,8 @@ import { WorkerModule } from './modules/worker/worker.module';
     // Implemented in TASK-007, expanded in TASK-009 & TASK-010
     WhatsAppModule,
 
-    // Future modules will be added here:
-    //   ReceiptsModule    (TASK-011)
-    //   InvoicesModule    (TASK-012)
+    // ReceiptsModule — handles receipt storage (TASK-014)
+    ReceiptsModule,
   ],
   controllers: [AppController],
   providers: [],

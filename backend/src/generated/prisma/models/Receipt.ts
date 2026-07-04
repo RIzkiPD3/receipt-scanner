@@ -28,10 +28,14 @@ export type AggregateReceipt = {
 
 export type ReceiptAvgAggregateOutputType = {
   totalAmount: runtime.Decimal | null
+  subtotal: runtime.Decimal | null
+  tax: runtime.Decimal | null
 }
 
 export type ReceiptSumAggregateOutputType = {
   totalAmount: runtime.Decimal | null
+  subtotal: runtime.Decimal | null
+  tax: runtime.Decimal | null
 }
 
 export type ReceiptMinAggregateOutputType = {
@@ -44,6 +48,8 @@ export type ReceiptMinAggregateOutputType = {
   transactionDate: Date | null
   rawText: string | null
   totalAmount: runtime.Decimal | null
+  subtotal: runtime.Decimal | null
+  tax: runtime.Decimal | null
   currency: string | null
   status: $Enums.ReceiptStatus | null
   createdAt: Date | null
@@ -60,6 +66,8 @@ export type ReceiptMaxAggregateOutputType = {
   transactionDate: Date | null
   rawText: string | null
   totalAmount: runtime.Decimal | null
+  subtotal: runtime.Decimal | null
+  tax: runtime.Decimal | null
   currency: string | null
   status: $Enums.ReceiptStatus | null
   createdAt: Date | null
@@ -76,6 +84,8 @@ export type ReceiptCountAggregateOutputType = {
   transactionDate: number
   rawText: number
   totalAmount: number
+  subtotal: number
+  tax: number
   currency: number
   status: number
   createdAt: number
@@ -86,10 +96,14 @@ export type ReceiptCountAggregateOutputType = {
 
 export type ReceiptAvgAggregateInputType = {
   totalAmount?: true
+  subtotal?: true
+  tax?: true
 }
 
 export type ReceiptSumAggregateInputType = {
   totalAmount?: true
+  subtotal?: true
+  tax?: true
 }
 
 export type ReceiptMinAggregateInputType = {
@@ -102,6 +116,8 @@ export type ReceiptMinAggregateInputType = {
   transactionDate?: true
   rawText?: true
   totalAmount?: true
+  subtotal?: true
+  tax?: true
   currency?: true
   status?: true
   createdAt?: true
@@ -118,6 +134,8 @@ export type ReceiptMaxAggregateInputType = {
   transactionDate?: true
   rawText?: true
   totalAmount?: true
+  subtotal?: true
+  tax?: true
   currency?: true
   status?: true
   createdAt?: true
@@ -134,6 +152,8 @@ export type ReceiptCountAggregateInputType = {
   transactionDate?: true
   rawText?: true
   totalAmount?: true
+  subtotal?: true
+  tax?: true
   currency?: true
   status?: true
   createdAt?: true
@@ -237,6 +257,8 @@ export type ReceiptGroupByOutputType = {
   transactionDate: Date | null
   rawText: string | null
   totalAmount: runtime.Decimal | null
+  subtotal: runtime.Decimal | null
+  tax: runtime.Decimal | null
   currency: string | null
   status: $Enums.ReceiptStatus
   createdAt: Date
@@ -276,6 +298,8 @@ export type ReceiptWhereInput = {
   transactionDate?: Prisma.DateTimeNullableFilter<"Receipt"> | Date | string | null
   rawText?: Prisma.StringNullableFilter<"Receipt"> | string | null
   totalAmount?: Prisma.DecimalNullableFilter<"Receipt"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.DecimalNullableFilter<"Receipt"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.DecimalNullableFilter<"Receipt"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.StringNullableFilter<"Receipt"> | string | null
   status?: Prisma.EnumReceiptStatusFilter<"Receipt"> | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFilter<"Receipt"> | Date | string
@@ -295,6 +319,8 @@ export type ReceiptOrderByWithRelationInput = {
   transactionDate?: Prisma.SortOrderInput | Prisma.SortOrder
   rawText?: Prisma.SortOrderInput | Prisma.SortOrder
   totalAmount?: Prisma.SortOrderInput | Prisma.SortOrder
+  subtotal?: Prisma.SortOrderInput | Prisma.SortOrder
+  tax?: Prisma.SortOrderInput | Prisma.SortOrder
   currency?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -317,6 +343,8 @@ export type ReceiptWhereUniqueInput = Prisma.AtLeast<{
   transactionDate?: Prisma.DateTimeNullableFilter<"Receipt"> | Date | string | null
   rawText?: Prisma.StringNullableFilter<"Receipt"> | string | null
   totalAmount?: Prisma.DecimalNullableFilter<"Receipt"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.DecimalNullableFilter<"Receipt"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.DecimalNullableFilter<"Receipt"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.StringNullableFilter<"Receipt"> | string | null
   status?: Prisma.EnumReceiptStatusFilter<"Receipt"> | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFilter<"Receipt"> | Date | string
@@ -336,6 +364,8 @@ export type ReceiptOrderByWithAggregationInput = {
   transactionDate?: Prisma.SortOrderInput | Prisma.SortOrder
   rawText?: Prisma.SortOrderInput | Prisma.SortOrder
   totalAmount?: Prisma.SortOrderInput | Prisma.SortOrder
+  subtotal?: Prisma.SortOrderInput | Prisma.SortOrder
+  tax?: Prisma.SortOrderInput | Prisma.SortOrder
   currency?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -360,6 +390,8 @@ export type ReceiptScalarWhereWithAggregatesInput = {
   transactionDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Receipt"> | Date | string | null
   rawText?: Prisma.StringNullableWithAggregatesFilter<"Receipt"> | string | null
   totalAmount?: Prisma.DecimalNullableWithAggregatesFilter<"Receipt"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.DecimalNullableWithAggregatesFilter<"Receipt"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.DecimalNullableWithAggregatesFilter<"Receipt"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.StringNullableWithAggregatesFilter<"Receipt"> | string | null
   status?: Prisma.EnumReceiptStatusWithAggregatesFilter<"Receipt"> | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Receipt"> | Date | string
@@ -375,6 +407,8 @@ export type ReceiptCreateInput = {
   transactionDate?: Date | string | null
   rawText?: string | null
   totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: string | null
   status?: $Enums.ReceiptStatus
   createdAt?: Date | string
@@ -394,6 +428,8 @@ export type ReceiptUncheckedCreateInput = {
   transactionDate?: Date | string | null
   rawText?: string | null
   totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: string | null
   status?: $Enums.ReceiptStatus
   createdAt?: Date | string
@@ -411,6 +447,8 @@ export type ReceiptUpdateInput = {
   transactionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -430,6 +468,8 @@ export type ReceiptUncheckedUpdateInput = {
   transactionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -448,6 +488,8 @@ export type ReceiptCreateManyInput = {
   transactionDate?: Date | string | null
   rawText?: string | null
   totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: string | null
   status?: $Enums.ReceiptStatus
   createdAt?: Date | string
@@ -463,6 +505,8 @@ export type ReceiptUpdateManyMutationInput = {
   transactionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -479,6 +523,8 @@ export type ReceiptUncheckedUpdateManyInput = {
   transactionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -505,6 +551,8 @@ export type ReceiptCountOrderByAggregateInput = {
   transactionDate?: Prisma.SortOrder
   rawText?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
+  subtotal?: Prisma.SortOrder
+  tax?: Prisma.SortOrder
   currency?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -513,6 +561,8 @@ export type ReceiptCountOrderByAggregateInput = {
 
 export type ReceiptAvgOrderByAggregateInput = {
   totalAmount?: Prisma.SortOrder
+  subtotal?: Prisma.SortOrder
+  tax?: Prisma.SortOrder
 }
 
 export type ReceiptMaxOrderByAggregateInput = {
@@ -525,6 +575,8 @@ export type ReceiptMaxOrderByAggregateInput = {
   transactionDate?: Prisma.SortOrder
   rawText?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
+  subtotal?: Prisma.SortOrder
+  tax?: Prisma.SortOrder
   currency?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -541,6 +593,8 @@ export type ReceiptMinOrderByAggregateInput = {
   transactionDate?: Prisma.SortOrder
   rawText?: Prisma.SortOrder
   totalAmount?: Prisma.SortOrder
+  subtotal?: Prisma.SortOrder
+  tax?: Prisma.SortOrder
   currency?: Prisma.SortOrder
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -549,6 +603,8 @@ export type ReceiptMinOrderByAggregateInput = {
 
 export type ReceiptSumOrderByAggregateInput = {
   totalAmount?: Prisma.SortOrder
+  subtotal?: Prisma.SortOrder
+  tax?: Prisma.SortOrder
 }
 
 export type ReceiptScalarRelationFilter = {
@@ -658,6 +714,8 @@ export type ReceiptCreateWithoutUserInput = {
   transactionDate?: Date | string | null
   rawText?: string | null
   totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: string | null
   status?: $Enums.ReceiptStatus
   createdAt?: Date | string
@@ -675,6 +733,8 @@ export type ReceiptUncheckedCreateWithoutUserInput = {
   transactionDate?: Date | string | null
   rawText?: string | null
   totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: string | null
   status?: $Enums.ReceiptStatus
   createdAt?: Date | string
@@ -722,6 +782,8 @@ export type ReceiptScalarWhereInput = {
   transactionDate?: Prisma.DateTimeNullableFilter<"Receipt"> | Date | string | null
   rawText?: Prisma.StringNullableFilter<"Receipt"> | string | null
   totalAmount?: Prisma.DecimalNullableFilter<"Receipt"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.DecimalNullableFilter<"Receipt"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.DecimalNullableFilter<"Receipt"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.StringNullableFilter<"Receipt"> | string | null
   status?: Prisma.EnumReceiptStatusFilter<"Receipt"> | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFilter<"Receipt"> | Date | string
@@ -737,6 +799,8 @@ export type ReceiptCreateWithoutItemsInput = {
   transactionDate?: Date | string | null
   rawText?: string | null
   totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: string | null
   status?: $Enums.ReceiptStatus
   createdAt?: Date | string
@@ -755,6 +819,8 @@ export type ReceiptUncheckedCreateWithoutItemsInput = {
   transactionDate?: Date | string | null
   rawText?: string | null
   totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: string | null
   status?: $Enums.ReceiptStatus
   createdAt?: Date | string
@@ -787,6 +853,8 @@ export type ReceiptUpdateWithoutItemsInput = {
   transactionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -805,6 +873,8 @@ export type ReceiptUncheckedUpdateWithoutItemsInput = {
   transactionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -821,6 +891,8 @@ export type ReceiptCreateWithoutInvoiceInput = {
   transactionDate?: Date | string | null
   rawText?: string | null
   totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: string | null
   status?: $Enums.ReceiptStatus
   createdAt?: Date | string
@@ -839,6 +911,8 @@ export type ReceiptUncheckedCreateWithoutInvoiceInput = {
   transactionDate?: Date | string | null
   rawText?: string | null
   totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: string | null
   status?: $Enums.ReceiptStatus
   createdAt?: Date | string
@@ -871,6 +945,8 @@ export type ReceiptUpdateWithoutInvoiceInput = {
   transactionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -889,6 +965,8 @@ export type ReceiptUncheckedUpdateWithoutInvoiceInput = {
   transactionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -905,6 +983,8 @@ export type ReceiptCreateManyUserInput = {
   transactionDate?: Date | string | null
   rawText?: string | null
   totalAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: string | null
   status?: $Enums.ReceiptStatus
   createdAt?: Date | string
@@ -920,6 +1000,8 @@ export type ReceiptUpdateWithoutUserInput = {
   transactionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -937,6 +1019,8 @@ export type ReceiptUncheckedUpdateWithoutUserInput = {
   transactionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -954,6 +1038,8 @@ export type ReceiptUncheckedUpdateManyWithoutUserInput = {
   transactionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   totalAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  subtotal?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  tax?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   currency?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumReceiptStatusFieldUpdateOperationsInput | $Enums.ReceiptStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1001,6 +1087,8 @@ export type ReceiptSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   transactionDate?: boolean
   rawText?: boolean
   totalAmount?: boolean
+  subtotal?: boolean
+  tax?: boolean
   currency?: boolean
   status?: boolean
   createdAt?: boolean
@@ -1021,6 +1109,8 @@ export type ReceiptSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   transactionDate?: boolean
   rawText?: boolean
   totalAmount?: boolean
+  subtotal?: boolean
+  tax?: boolean
   currency?: boolean
   status?: boolean
   createdAt?: boolean
@@ -1038,6 +1128,8 @@ export type ReceiptSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   transactionDate?: boolean
   rawText?: boolean
   totalAmount?: boolean
+  subtotal?: boolean
+  tax?: boolean
   currency?: boolean
   status?: boolean
   createdAt?: boolean
@@ -1055,13 +1147,15 @@ export type ReceiptSelectScalar = {
   transactionDate?: boolean
   rawText?: boolean
   totalAmount?: boolean
+  subtotal?: boolean
+  tax?: boolean
   currency?: boolean
   status?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ReceiptOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "whatsappMessageId" | "whatsappMediaId" | "imageUrl" | "merchantName" | "transactionDate" | "rawText" | "totalAmount" | "currency" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["receipt"]>
+export type ReceiptOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "whatsappMessageId" | "whatsappMediaId" | "imageUrl" | "merchantName" | "transactionDate" | "rawText" | "totalAmount" | "subtotal" | "tax" | "currency" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["receipt"]>
 export type ReceiptInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   items?: boolean | Prisma.Receipt$itemsArgs<ExtArgs>
@@ -1092,6 +1186,8 @@ export type $ReceiptPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     transactionDate: Date | null
     rawText: string | null
     totalAmount: runtime.Decimal | null
+    subtotal: runtime.Decimal | null
+    tax: runtime.Decimal | null
     currency: string | null
     status: $Enums.ReceiptStatus
     createdAt: Date
@@ -1531,6 +1627,8 @@ export interface ReceiptFieldRefs {
   readonly transactionDate: Prisma.FieldRef<"Receipt", 'DateTime'>
   readonly rawText: Prisma.FieldRef<"Receipt", 'String'>
   readonly totalAmount: Prisma.FieldRef<"Receipt", 'Decimal'>
+  readonly subtotal: Prisma.FieldRef<"Receipt", 'Decimal'>
+  readonly tax: Prisma.FieldRef<"Receipt", 'Decimal'>
   readonly currency: Prisma.FieldRef<"Receipt", 'String'>
   readonly status: Prisma.FieldRef<"Receipt", 'ReceiptStatus'>
   readonly createdAt: Prisma.FieldRef<"Receipt", 'DateTime'>

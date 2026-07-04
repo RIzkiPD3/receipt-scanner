@@ -17,6 +17,7 @@ type Config struct {
 	NvidiaApiKey       string
 	NvidiaBaseUrl      string
 	NvidiaModel        string
+	BackendApiUrl      string
 }
 
 func LoadConfig() (*Config, error) {
@@ -34,6 +35,7 @@ func LoadConfig() (*Config, error) {
 		NvidiaApiKey:       getEnv("NVIDIA_API_KEY", ""),
 		NvidiaBaseUrl:      getEnv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
 		NvidiaModel:        getEnv("NVIDIA_MODEL", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"),
+		BackendApiUrl:      getEnv("BACKEND_API_URL", "http://localhost:3000"),
 	}, nil
 }
 

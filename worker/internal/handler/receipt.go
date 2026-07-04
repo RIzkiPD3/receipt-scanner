@@ -2,6 +2,8 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
+	"invoicego/worker/internal/client"
 	"invoicego/worker/internal/model"
 	"invoicego/worker/internal/processing"
 	"log/slog"
@@ -11,13 +13,19 @@ import (
 // ReceiptHandler menangani permintaan POST /process-receipt
 type ReceiptHandler struct {
 	processingService *processing.ProcessingService
+	backendClient     *client.BackendClient
 	logger            *slog.Logger
 }
 
 // NewReceiptHandler membuat instance baru ReceiptHandler dengan dependency injection
-func NewReceiptHandler(processingService *processing.ProcessingService, logger *slog.Logger) *ReceiptHandler {
+func NewReceiptHandler(
+	processingService *processing.ProcessingService,
+	backendClient *client.BackendClient,
+	logger *slog.Logger,
+) *ReceiptHandler {
 	return &ReceiptHandler{
 		processingService: processingService,
+		backendClient:     backendClient,
 		logger:            logger,
 	}
 }
@@ -67,7 +75,19 @@ func (h *ReceiptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logger.Info("Pipeline pemrosesan struk berhasil diselesaikan", "receiptId", req.ReceiptID)
+	h.logger.Info("Pipeline pemrosesan struk berhasil diselesaikan, menyimpan ke backend", "receiptId", req.ReceiptID)
+
+	// Simpan data struk terstruktur ke backend API
+	if err := h.backendClient.SaveReceipt(r.Context(), result.Receipt, req.ImageURL); err != nil {
+		h.logger.Error("Gagal menyimpan hasil struk ke backend", "receiptId", req.ReceiptID, "error", err.Error())
+		h.sendJSON(w, http.StatusInternalServerError, model.ProcessReceiptResponse{
+			Status: "error",
+			Error:  fmt.Sprintf("failed to save receipt to database: %s", err.Error()),
+		})
+		return
+	}
+
+	h.logger.Info("Data struk berhasil disimpan ke backend", "receiptId", req.ReceiptID)
 
 	h.sendJSON(w, http.StatusOK, model.ProcessReceiptResponse{
 		Status:  "success",

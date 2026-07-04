@@ -9,6 +9,7 @@ import (
 	llmprovider "invoicego/worker/internal/llm/provider"
 	ocrprovider "invoicego/worker/internal/ocr/provider"
 	ocrservice "invoicego/worker/internal/ocr/service"
+	"invoicego/worker/internal/client"
 	"invoicego/worker/internal/processing"
 	"log/slog"
 	"net/http"
@@ -55,12 +56,16 @@ func main() {
 	)
 	llmProv := llmprovider.NewNemotronProvider(cfg.NvidiaApiKey, cfg.NvidiaBaseUrl, cfg.NvidiaModel, nil, logger)
 
+	// Inisialisasi NestJS Backend API Client
+	logger.Info("Menginisialisasi NestJS Backend Client...", "baseUrl", cfg.BackendApiUrl)
+	backendClient := client.NewBackendClient(cfg.BackendApiUrl, nil, logger)
+
 	// 6. Inisialisasi Processing Service (pipeline OCR → LLM)
 	processingSvc := processing.NewProcessingService(ocrSvc, llmProv, logger)
 
 	// 7. Inisialisasi handler dengan dependency injection
 	healthHandler := handler.NewHealthHandler(logger)
-	receiptHandler := handler.NewReceiptHandler(processingSvc, logger)
+	receiptHandler := handler.NewReceiptHandler(processingSvc, backendClient, logger)
 
 	// 8. Daftarkan routes ke ServeMux
 	mux := http.NewServeMux()
