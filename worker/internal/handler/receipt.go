@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	llmservice "invoicego/worker/internal/llm/service"
 	"invoicego/worker/internal/model"
 	"invoicego/worker/internal/service"
 	"log/slog"
@@ -11,13 +12,15 @@ import (
 // ReceiptHandler menangani permintaan POST /process-receipt
 type ReceiptHandler struct {
 	ocrService *service.OCRService
+	llmService *llmservice.LLMService
 	logger     *slog.Logger
 }
 
-// NewReceiptHandler membuat instance baru ReceiptHandler dengan dependency injection ocrService dan logger
-func NewReceiptHandler(ocrService *service.OCRService, logger *slog.Logger) *ReceiptHandler {
+// NewReceiptHandler membuat instance baru ReceiptHandler dengan dependency injection
+func NewReceiptHandler(ocrService *service.OCRService, llmService *llmservice.LLMService, logger *slog.Logger) *ReceiptHandler {
 	return &ReceiptHandler{
 		ocrService: ocrService,
+		llmService: llmService,
 		logger:     logger,
 	}
 }
@@ -46,7 +49,7 @@ func (h *ReceiptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logger.Info("permintaan pemrosesan struk diterima untuk OCR",
+	h.logger.Info("permintaan pemrosesan struk diterima untuk OCR dan LLM",
 		"receiptId", req.ReceiptID,
 		"imageUrl", req.ImageURL,
 	)
@@ -62,15 +65,31 @@ func (h *ReceiptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logger.Info("Pemrosesan struk dengan OCR berhasil diselesaikan",
+	h.logger.Info("Pemrosesan struk dengan OCR berhasil diselesaikan, memulai ekstraksi LLM",
 		"receiptId", req.ReceiptID,
 		"confidence", ocrResult.Confidence,
+	)
+
+	// Ubah teks OCR menjadi data struk belanja terstruktur
+	receiptResult, err := h.llmService.ProcessReceiptText(r.Context(), ocrResult.Text)
+	if err != nil {
+		h.logger.Error("Gagal mengubah teks OCR menjadi data terstruktur", "receiptId", req.ReceiptID, "error", err.Error())
+		h.sendJSON(w, http.StatusInternalServerError, model.ProcessReceiptResponse{
+			Status: "error",
+			Error:  err.Error(),
+		})
+		return
+	}
+
+	h.logger.Info("Pemrosesan struk dengan LLM berhasil diselesaikan",
+		"receiptId", req.ReceiptID,
 	)
 
 	h.sendJSON(w, http.StatusOK, model.ProcessReceiptResponse{
 		Status:     "success",
 		Text:       ocrResult.Text,
 		Confidence: ocrResult.Confidence,
+		Receipt:    receiptResult,
 	})
 }
 

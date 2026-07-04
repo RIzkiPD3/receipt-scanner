@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"invoicego/worker/internal/config"
 	"invoicego/worker/internal/handler"
+	llmprovider "invoicego/worker/internal/llm/provider"
+	llmservice "invoicego/worker/internal/llm/service"
 	"invoicego/worker/internal/ocr"
 	"invoicego/worker/internal/service"
 	"log/slog"
@@ -47,9 +49,14 @@ func main() {
 	ocrProvider := ocr.NewTesseractProvider(cfg.TesseractPath, logger)
 	ocrService := service.NewOCRService(ocrProvider, cfg.TempDownloadDir, logger)
 
+	// Inisialisasi LLM Provider dan LLM Service
+	logger.Info("Menginisialisasi sistem LLM Nemotron...", "baseUrl", cfg.NvidiaBaseUrl, "model", cfg.NvidiaModel)
+	llmProvider := llmprovider.NewNemotronProvider(cfg.NvidiaApiKey, cfg.NvidiaBaseUrl, cfg.NvidiaModel, nil, logger)
+	llmService := llmservice.NewLLMService(llmProvider, logger)
+
 	// 4. Inisialisasi handler dengan dependency injection
 	healthHandler := handler.NewHealthHandler(logger)
-	receiptHandler := handler.NewReceiptHandler(ocrService, logger)
+	receiptHandler := handler.NewReceiptHandler(ocrService, llmService, logger)
 
 	// 5. Daftarkan routes ke ServeMux
 	// Go 1.22+ mendukung method pattern seperti "GET /health"

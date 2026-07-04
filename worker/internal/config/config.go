@@ -14,6 +14,9 @@ type Config struct {
 	BackendCallbackUrl string
 	TesseractPath      string
 	TempDownloadDir    string
+	NvidiaApiKey       string
+	NvidiaBaseUrl      string
+	NvidiaModel        string
 }
 
 func LoadConfig() (*Config, error) {
@@ -28,6 +31,9 @@ func LoadConfig() (*Config, error) {
 		BackendCallbackUrl: getEnv("BACKEND_CALLBACK_URL", "http://localhost:3000/api/v1/receipts/callback"),
 		TesseractPath:      getEnv("TESSERACT_PATH", "tesseract"),
 		TempDownloadDir:    getEnv("TEMP_DOWNLOAD_DIR", "temp/downloads"),
+		NvidiaApiKey:       getEnv("NVIDIA_API_KEY", ""),
+		NvidiaBaseUrl:      getEnv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
+		NvidiaModel:        getEnv("NVIDIA_MODEL", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"),
 	}, nil
 }
 
