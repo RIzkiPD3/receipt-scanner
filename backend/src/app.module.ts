@@ -8,6 +8,7 @@ import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { WorkerModule } from './modules/worker/worker.module';
 import { ReceiptsModule } from './modules/receipts/receipts.module';
+import { InvoicesModule } from './modules/invoices/invoices.module';
 
 // =============================================================================
 // AppModule — Root Application Module
@@ -64,6 +65,9 @@ import { ReceiptsModule } from './modules/receipts/receipts.module';
 
     // ReceiptsModule — handles receipt storage (TASK-014)
     ReceiptsModule,
+
+    // InvoicesModule — handles invoice generation (TASK-015)
+    InvoicesModule,
   ],
   controllers: [AppController],
   providers: [],

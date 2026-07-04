@@ -59,3 +59,8 @@ export type ReceiptItem = Prisma.ReceiptItemModel
  * 
  */
 export type Invoice = Prisma.InvoiceModel
+/**
+ * Model InvoiceItem
+ * 
+ */
+export type InvoiceItem = Prisma.InvoiceItemModel
