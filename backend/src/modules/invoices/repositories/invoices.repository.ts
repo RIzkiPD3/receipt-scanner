@@ -70,4 +70,13 @@ export class InvoicesRepository {
       });
     });
   }
+
+  // Mencari nomor telepon pengguna berdasarkan userId (untuk notifikasi WhatsApp)
+  async findUserPhoneNumber(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { phoneNumber: true },
+    });
+    return user?.phoneNumber ?? null;
+  }
 }

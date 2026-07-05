@@ -4,6 +4,8 @@ import { WebhookService } from './webhook.service';
 import { WhatsAppParser } from './whatsapp-parser.service';
 import { WhatsAppGraphClient } from './client/whatsapp-graph.client';
 import { WhatsAppMediaService } from './services/whatsapp-media.service';
+import { WhatsAppNotificationService } from './services/whatsapp-notification.service';
+import { InvoiceMessageFormatter } from './formatter/invoice-message.formatter';
 import { StorageModule } from '../storage/storage.module';
 
 // =============================================================================
@@ -24,6 +26,10 @@ import { StorageModule } from '../storage/storage.module';
 // Ekspansi di TASK-010:
 //   - StorageModule → diimport agar STORAGE_PROVIDER token tersedia
 //     untuk WhatsAppMediaService (Dependency Inversion pada penyimpanan).
+//
+// Ekspansi di TASK-016:
+//   - InvoiceMessageFormatter → memformat pesan invoice menjadi teks WhatsApp
+//   - WhatsAppNotificationService → mengorkestrasi format + kirim notifikasi
 // =============================================================================
 
 @Module({
@@ -34,12 +40,16 @@ import { StorageModule } from '../storage/storage.module';
     WhatsAppParser,
     WhatsAppGraphClient,
     WhatsAppMediaService,
+    InvoiceMessageFormatter,
+    WhatsAppNotificationService,
   ],
   exports: [
     WebhookService,
     WhatsAppParser,
     WhatsAppGraphClient,
     WhatsAppMediaService,
+    InvoiceMessageFormatter,
+    WhatsAppNotificationService,
   ],
 })
 export class WhatsAppModule {}

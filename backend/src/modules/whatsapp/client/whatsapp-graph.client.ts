@@ -120,4 +120,65 @@ export class WhatsAppGraphClient {
       throw error;
     }
   }
+
+  /**
+   * Mengirim pesan teks ke pengguna WhatsApp melalui Meta Cloud API.
+   *
+   * POST https://graph.facebook.com/v21.0/{phoneNumberId}/messages
+   *
+   * @param to   Nomor telepon penerima (format internasional tanpa +, misal: 628123456789)
+   * @param text Isi pesan teks yang akan dikirim
+   */
+  async sendTextMessage(to: string, text: string): Promise<void> {
+    const phoneNumberId = this.configService.get<string>('WHATSAPP_PHONE_NUMBER_ID');
+    const url = `https://graph.facebook.com/${this.graphApiVersion}/${phoneNumberId}/messages`;
+
+    this.logger.log(
+      `Mengirim pesan WhatsApp ke ${to} (${text.length} karakter)`,
+      WhatsAppGraphClient.name,
+    );
+
+    const body = JSON.stringify({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to,
+      type: 'text',
+      text: { body: text },
+    });
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...this.getAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body,
+      });
+
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        this.logger.error(
+          `Gagal mengirim pesan WhatsApp (HTTP ${response.status}): ${responseText}`,
+          WhatsAppGraphClient.name,
+        );
+        throw new InternalServerErrorException(
+          `WhatsApp API returned status ${response.status}: ${responseText}`,
+        );
+      }
+
+      this.logger.log(
+        `Pesan WhatsApp berhasil dikirim ke ${to}. Response: ${responseText}`,
+        WhatsAppGraphClient.name,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Terjadi error saat mengirim pesan WhatsApp ke ${to}`,
+        error instanceof Error ? error.stack : String(error),
+        WhatsAppGraphClient.name,
+      );
+      throw error;
+    }
+  }
 }

@@ -1,11 +1,15 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InvoicesRepository } from '../repositories/invoices.repository';
+import { WhatsAppNotificationService } from '../../whatsapp/services/whatsapp-notification.service';
 
 @Injectable()
 export class InvoicesService {
   private readonly logger = new Logger(InvoicesService.name);
 
-  constructor(private readonly repository: InvoicesRepository) {}
+  constructor(
+    private readonly repository: InvoicesRepository,
+    private readonly whatsappNotification: WhatsAppNotificationService,
+  ) {}
 
   // Menghasilkan nomor invoice dengan format INV-YYYYMMDD-0001
   private async generateInvoiceNumber(): Promise<string> {
@@ -82,6 +86,25 @@ export class InvoicesService {
 
         const createdInvoice = await this.repository.createInvoice(invoiceData, itemsData);
         this.logger.log(`Invoice berhasil disimpan. Nomor: ${invoiceNumber}, ID: ${createdInvoice.id}`);
+
+        // 4. Kirim notifikasi WhatsApp ke pengguna (fire-and-forget, tidak membatalkan invoice)
+        const phoneNumber = await this.repository.findUserPhoneNumber(receipt.userId);
+        if (phoneNumber) {
+          // Jalankan secara async tanpa await agar tidak memblokir response
+          this.whatsappNotification
+            .sendInvoiceSummary(phoneNumber, createdInvoice)
+            .catch((err) =>
+              this.logger.error(
+                `Background WhatsApp notification gagal untuk invoice ${invoiceNumber}`,
+                err instanceof Error ? err.stack : String(err),
+              ),
+            );
+        } else {
+          this.logger.warn(
+            `Nomor telepon untuk userId ${receipt.userId} tidak ditemukan. Notifikasi dilewati.`
+          );
+        }
+
         return createdInvoice;
       } catch (err: any) {
         lastError = err;
