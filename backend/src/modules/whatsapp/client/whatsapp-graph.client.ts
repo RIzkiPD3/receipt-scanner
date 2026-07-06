@@ -181,4 +181,225 @@ export class WhatsAppGraphClient {
       throw error;
     }
   }
+
+  /**
+   * Mengirim pesan interaktif dengan tombol balasan cepat (Reply Buttons).
+   *
+   * POST https://graph.facebook.com/v21.0/{phoneNumberId}/messages
+   *
+   * @param to      Nomor telepon penerima
+   * @param bodyText Teks pesan utama
+   * @param buttons List tombol (maksimal 3, title maksimal 20 karakter)
+   */
+  async sendInteractiveButtonMessage(
+    to: string,
+    bodyText: string,
+    buttons: Array<{ id: string; title: string }>,
+  ): Promise<void> {
+    const phoneNumberId = this.configService.get<string>('WHATSAPP_PHONE_NUMBER_ID');
+    const url = `https://graph.facebook.com/${this.graphApiVersion}/${phoneNumberId}/messages`;
+
+    this.logger.log(
+      `Mengirim pesan tombol interaktif WhatsApp ke ${to} dengan ${buttons.length} tombol`,
+      WhatsAppGraphClient.name,
+    );
+
+    const formattedButtons = buttons.map((btn) => ({
+      type: 'reply',
+      reply: {
+        id: btn.id,
+        title: btn.title,
+      },
+    }));
+
+    const body = JSON.stringify({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to,
+      type: 'interactive',
+      interactive: {
+        type: 'button',
+        body: {
+          text: bodyText,
+        },
+        action: {
+          buttons: formattedButtons,
+        },
+      },
+    });
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...this.getAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body,
+      });
+
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        this.logger.error(
+          `Gagal mengirim pesan tombol interaktif WhatsApp (HTTP ${response.status}): ${responseText}`,
+          WhatsAppGraphClient.name,
+        );
+        throw new InternalServerErrorException(
+          `WhatsApp API returned status ${response.status}: ${responseText}`,
+        );
+      }
+
+      this.logger.log(
+        `Pesan tombol interaktif WhatsApp berhasil dikirim ke ${to}. Response: ${responseText}`,
+        WhatsAppGraphClient.name,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Terjadi error saat mengirim pesan tombol interaktif WhatsApp ke ${to}`,
+        error instanceof Error ? error.stack : String(error),
+        WhatsAppGraphClient.name,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Mengunggah media (misal PDF) ke Meta Graph API untuk pengiriman berkas.
+   *
+   * POST https://graph.facebook.com/v21.0/{phoneNumberId}/media
+   *
+   * @param fileBuffer Buffer data biner berkas
+   * @param filename   Nama berkas saat dikirim
+   * @param mimeType   MIME type berkas
+   * @returns ID Media unik dari Meta
+   */
+  async uploadMedia(
+    fileBuffer: Buffer,
+    filename: string,
+    mimeType: string,
+  ): Promise<string> {
+    const phoneNumberId = this.configService.get<string>('WHATSAPP_PHONE_NUMBER_ID');
+    const url = `https://graph.facebook.com/${this.graphApiVersion}/${phoneNumberId}/media`;
+
+    this.logger.log(
+      `Mengunggah media ke Meta API: nama="${filename}", tipe="${mimeType}" (${fileBuffer.length} bytes)`,
+      WhatsAppGraphClient.name,
+    );
+
+    const formData = new FormData();
+    formData.append('messaging_product', 'whatsapp');
+    formData.append('type', mimeType);
+    
+    const blob = new Blob([fileBuffer], { type: mimeType });
+    formData.append('file', blob, filename);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...this.getAuthHeaders(),
+        },
+        body: formData,
+      });
+
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        this.logger.error(
+          `Gagal mengunggah media ke WhatsApp (HTTP ${response.status}): ${responseText}`,
+          WhatsAppGraphClient.name,
+        );
+        throw new InternalServerErrorException(
+          `WhatsApp Media Upload API returned status ${response.status}: ${responseText}`,
+        );
+      }
+
+      const data = JSON.parse(responseText) as { id: string };
+      this.logger.log(
+        `Media berhasil diunggah ke WhatsApp. ID Media: ${data.id}`,
+        WhatsAppGraphClient.name,
+      );
+      return data.id;
+    } catch (error) {
+      this.logger.error(
+        `Terjadi error saat mengunggah media ke WhatsApp`,
+        error instanceof Error ? error.stack : String(error),
+        WhatsAppGraphClient.name,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Mengirim pesan dokumen ke pengguna WhatsApp menggunakan ID Media.
+   *
+   * POST https://graph.facebook.com/v21.0/{phoneNumberId}/messages
+   *
+   * @param to       Nomor telepon penerima
+   * @param mediaId  ID Media dari hasil unggah
+   * @param filename Nama berkas yang akan ditampilkan di aplikasi WhatsApp
+   * @param caption  Keterangan opsional di bawah dokumen
+   */
+  async sendDocumentMessage(
+    to: string,
+    mediaId: string,
+    filename: string,
+    caption?: string,
+  ): Promise<void> {
+    const phoneNumberId = this.configService.get<string>('WHATSAPP_PHONE_NUMBER_ID');
+    const url = `https://graph.facebook.com/${this.graphApiVersion}/${phoneNumberId}/messages`;
+
+    this.logger.log(
+      `Mengirim dokumen WhatsApp ke ${to} (ID Media: ${mediaId}, Berkas: "${filename}")`,
+      WhatsAppGraphClient.name,
+    );
+
+    const body = JSON.stringify({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to,
+      type: 'document',
+      document: {
+        id: mediaId,
+        filename,
+        ...(caption ? { caption } : {}),
+      },
+    });
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...this.getAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body,
+      });
+
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        this.logger.error(
+          `Gagal mengirim dokumen WhatsApp (HTTP ${response.status}): ${responseText}`,
+          WhatsAppGraphClient.name,
+        );
+        throw new InternalServerErrorException(
+          `WhatsApp Document API returned status ${response.status}: ${responseText}`,
+        );
+      }
+
+      this.logger.log(
+        `Dokumen WhatsApp berhasil dikirim ke ${to}. Response: ${responseText}`,
+        WhatsAppGraphClient.name,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Terjadi error saat mengirim dokumen WhatsApp ke ${to}`,
+        error instanceof Error ? error.stack : String(error),
+        WhatsAppGraphClient.name,
+      );
+      throw error;
+    }
+  }
 }

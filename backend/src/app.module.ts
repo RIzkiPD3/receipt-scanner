@@ -9,6 +9,7 @@ import { StorageModule } from './modules/storage/storage.module';
 import { WorkerModule } from './modules/worker/worker.module';
 import { ReceiptsModule } from './modules/receipts/receipts.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
+import { PdfModule } from './modules/pdf/pdf.module';
 
 // =============================================================================
 // AppModule — Root Application Module
@@ -53,6 +54,9 @@ import { InvoicesModule } from './modules/invoices/invoices.module';
     // WorkerModule — menyediakan WorkerClient untuk berkomunikasi dengan
     //               Golang Worker via HTTP REST (dengan retry + timeout).
     WorkerModule,
+
+    // PdfModule — modul generator dokumen PDF
+    PdfModule,
 
     // -------------------------------------------------------------------------
     // Feature Modules

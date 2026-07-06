@@ -17,7 +17,7 @@ export interface IncomingMessage {
   timestamp: Date;
 
   /** Tipe isi pesan */
-  type: 'text' | 'image' | 'document' | 'other';
+  type: 'text' | 'image' | 'document' | 'interactive' | 'other';
 
   /** Konten teks pesan (jika bertipe 'text', atau berupa caption gambar/dokumen) */
   textBody?: string;
@@ -30,4 +30,10 @@ export interface IncomingMessage {
 
   /** Nama file asli (jika bertipe 'document') */
   filename?: string;
+
+  /** ID tombol yang ditekan (untuk tipe 'interactive' button_reply) */
+  buttonReplyId?: string;
+
+  /** Judul/Label tombol yang ditekan */
+  buttonReplyTitle?: string;
 }

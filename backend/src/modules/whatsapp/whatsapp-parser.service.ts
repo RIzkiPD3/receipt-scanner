@@ -107,6 +107,26 @@ export class WhatsAppParser {
           textBody: msg.document?.caption ?? '',
         };
 
+      case 'interactive':
+        if (msg.interactive?.type === 'button_reply') {
+          return {
+            ...baseMessage,
+            type: 'interactive',
+            buttonReplyId: msg.interactive.button_reply?.id,
+            buttonReplyTitle: msg.interactive.button_reply?.title,
+            textBody: msg.interactive.button_reply?.title ?? '',
+          };
+        }
+        this.logger.warn(
+          `Tipe pesan interaktif tidak didukung: ${msg.interactive?.type} (ID Pesan: ${messageId})`,
+          WhatsAppParser.name,
+        );
+        return {
+          ...baseMessage,
+          type: 'other',
+          textBody: `[Tipe interaktif tidak didukung: ${msg.interactive?.type}]`,
+        };
+
       default:
         // Menangani tipe yang tidak didukung secara spesifik di atas (misal sticker, audio, dsb.)
         this.logger.warn(

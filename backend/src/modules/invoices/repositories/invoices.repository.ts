@@ -79,4 +79,12 @@ export class InvoicesRepository {
     });
     return user?.phoneNumber ?? null;
   }
+
+  // Mencari Invoice beserta item-item di dalamnya berdasarkan nomor invoice
+  async findByInvoiceNumber(invoiceNumber: string) {
+    return this.prisma.invoice.findUnique({
+      where: { invoiceNumber },
+      include: { items: true },
+    });
+  }
 }

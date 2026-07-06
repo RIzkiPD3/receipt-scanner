@@ -6,7 +6,9 @@ import { WhatsAppGraphClient } from './client/whatsapp-graph.client';
 import { WhatsAppMediaService } from './services/whatsapp-media.service';
 import { WhatsAppNotificationService } from './services/whatsapp-notification.service';
 import { InvoiceMessageFormatter } from './formatter/invoice-message.formatter';
+import { PdfRequestHandler } from './services/pdf-request.handler';
 import { StorageModule } from '../storage/storage.module';
+import { PdfModule } from '../pdf/pdf.module';
 
 // =============================================================================
 // WhatsAppModule
@@ -30,10 +32,14 @@ import { StorageModule } from '../storage/storage.module';
 // Ekspansi di TASK-016:
 //   - InvoiceMessageFormatter → memformat pesan invoice menjadi teks WhatsApp
 //   - WhatsAppNotificationService → mengorkestrasi format + kirim notifikasi
+//
+// Ekspansi di TASK-017:
+//   - PdfModule → diimport untuk menyambungkan generator PDF
+//   - PdfRequestHandler → menangani klik tombol PDF interaktif secara async
 // =============================================================================
 
 @Module({
-  imports: [StorageModule],
+  imports: [StorageModule, PdfModule],
   controllers: [WebhookController],
   providers: [
     WebhookService,
@@ -42,6 +48,7 @@ import { StorageModule } from '../storage/storage.module';
     WhatsAppMediaService,
     InvoiceMessageFormatter,
     WhatsAppNotificationService,
+    PdfRequestHandler,
   ],
   exports: [
     WebhookService,
@@ -50,6 +57,7 @@ import { StorageModule } from '../storage/storage.module';
     WhatsAppMediaService,
     InvoiceMessageFormatter,
     WhatsAppNotificationService,
+    PdfRequestHandler,
   ],
 })
 export class WhatsAppModule {}

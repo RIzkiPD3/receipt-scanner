@@ -2,6 +2,7 @@ import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { WhatsAppWebhookPayload } from './interfaces/webhook-payload.interface';
 import { WhatsAppParser } from './whatsapp-parser.service';
+import { PdfRequestHandler } from './services/pdf-request.handler';
 
 // =============================================================================
 // WebhookService
@@ -13,6 +14,9 @@ import { WhatsAppParser } from './whatsapp-parser.service';
 // Di TASK-008, Service ini menggunakan WhatsAppParser untuk menyaring dan
 // mengurai payload menjadi objek internal IncomingMessage, lalu mencatatnya
 // ke logger.
+//
+// Di TASK-017, Service ini mengintegrasikan PdfRequestHandler untuk memproses
+// pesan interaktif tombol balasan "Buatkan PDF" dari pengguna.
 // =============================================================================
 
 @Injectable()
@@ -22,6 +26,7 @@ export class WebhookService {
   constructor(
     private readonly configService: ConfigService,
     private readonly parser: WhatsAppParser,
+    private readonly pdfRequestHandler: PdfRequestHandler,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -100,6 +105,21 @@ export class WebhookService {
         `Detail Pesan Terurai: ${JSON.stringify(msg)}`,
         WebhookService.name,
       );
+
+      // Pemicu pembuatan PDF on-demand (fire-and-forget)
+      if (msg.type === 'interactive' && msg.buttonReplyId) {
+        if (this.pdfRequestHandler.isPdfRequest(msg.buttonReplyId)) {
+          this.pdfRequestHandler
+            .handle(msg.from, msg.buttonReplyId)
+            .catch((err) =>
+              this.logger.error(
+                `Background PDF handler gagal untuk ${msg.from}`,
+                err instanceof Error ? err.stack : String(err),
+                WebhookService.name,
+              ),
+            );
+        }
+      }
     }
 
     // Iterasi setiap entry (bisa lebih dari satu dalam satu payload) untuk status & error
