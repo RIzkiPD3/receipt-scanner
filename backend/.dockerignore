@@ -1,0 +1,38 @@
+# ── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Build output (re-created inside container) ────────────────────────────────
+dist/
+coverage/
+
+# ── Secrets & local env ───────────────────────────────────────────────────────
+.env
+.env.*
+*.local
+
+# ── Tests (not needed at runtime) ────────────────────────────────────────────
+**/*.spec.ts
+**/*.e2e-spec.ts
+test/
+jest.config.*
+
+# ── Temp & generated storage ──────────────────────────────────────────────────
+temp/
+storage/
+
+# ── Prisma generated client (re-generated during build) ──────────────────────
+src/generated/
+
+# ── Git & IDE ─────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── OS artefacts ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

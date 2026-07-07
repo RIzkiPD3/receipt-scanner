@@ -1,0 +1,151 @@
+# =============================================================================
+# docker-compose.yml — InvoiceGo Local Development Stack
+# =============================================================================
+# Menjalankan tiga layanan:
+#   postgres  — PostgreSQL 17 (database)
+#   backend   — NestJS API (port 3000)
+#   worker    — Golang + Tesseract OCR worker (port 8080)
+#
+# Penggunaan:
+#   1. cp .env.example .env  # lalu isi nilai yang diperlukan
+#   2. docker compose up -d --build
+#   3. docker compose down
+#
+# Semua layanan berkomunikasi menggunakan service name sebagai hostname
+# di dalam network "invoicego" — BUKAN localhost.
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 17
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:17-alpine
+    container_name: invoicego-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-invoicego}
+      POSTGRES_USER: ${POSTGRES_USER:-invoicego}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+    volumes:
+      # Data persisten — tidak hilang saat container dihapus
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - invoicego
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-invoicego} -d ${POSTGRES_DB:-invoicego}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # NestJS Backend
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: invoicego-backend
+    restart: unless-stopped
+    env_file:
+      # Memuat semua variabel dari root .env
+      - .env
+    environment:
+      # Nilai-nilai ini override .env untuk memastikan konfigurasi Docker tepat
+      NODE_ENV: production
+      PORT: "3000"
+      DB_HOST: postgres
+      DATABASE_URL: postgresql://${POSTGRES_USER:-invoicego}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-invoicego}?schema=public
+      WORKER_SERVICE_URL: http://worker:8080
+    ports:
+      - "3000:3000"
+    volumes:
+      # Storage PDF yang di-generate (persisten)
+      - storage_data:/app/storage
+      # Uploads temporary (file struk dari WhatsApp)
+      - uploads_data:/app/temp/uploads
+    networks:
+      - invoicego
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # wget tersedia di Alpine node image
+      test:
+        - CMD-SHELL
+        - wget -qO- http://localhost:3000/api/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ---------------------------------------------------------------------------
+  # Golang Worker (OCR + LLM Pipeline)
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: invoicego-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Override agar worker selalu menggunakan port 8080 dan env production
+      PORT: "8080"
+      ENV: production
+      # Backend harus dijangkau via service name, bukan localhost
+      BACKEND_API_URL: http://backend:3000
+      BACKEND_CALLBACK_URL: http://backend:3000/api/v1/receipts/callback
+      TESSERACT_PATH: tesseract
+      TEMP_DOWNLOAD_DIR: temp/downloads
+    ports:
+      - "8080:8080"
+    volumes:
+      # Direktori temp untuk file gambar yang di-download sebelum OCR
+      - downloads_data:/app/temp/downloads
+    networks:
+      - invoicego
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8080/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  invoicego:
+    name: invoicego-network
+    driver: bridge
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  # Data PostgreSQL — hilang hanya jika di-down -v secara eksplisit
+  postgres_data:
+    name: invoicego-postgres-data
+
+  # File PDF yang di-generate (storage/pdf/)
+  storage_data:
+    name: invoicego-storage
+
+  # File upload sementara dari WhatsApp (temp/uploads/)
+  uploads_data:
+    name: invoicego-uploads
+
+  # File download sementara untuk OCR worker (temp/downloads/)
+  downloads_data:
+    name: invoicego-downloads

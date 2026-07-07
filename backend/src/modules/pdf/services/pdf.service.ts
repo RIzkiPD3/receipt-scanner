@@ -44,8 +44,18 @@ export class PdfService {
     let browser: puppeteer.Browser | null = null;
     try {
       this.logger.log(`Menjalankan instance Puppeteer headless...`, PdfService.name);
+
+      // Di dalam Docker/Alpine, Chromium disediakan oleh sistem (via apk).
+      // PUPPETEER_EXECUTABLE_PATH menunjuk ke binary tersebut.
+      // Di luar Docker (local dev), biarkan Puppeteer menggunakan Chrome bawaan.
+      const executablePath = process.env['PUPPETEER_EXECUTABLE_PATH'] || undefined;
+      if (executablePath) {
+        this.logger.log(`Menggunakan Chromium dari: ${executablePath}`, PdfService.name);
+      }
+
       browser = await puppeteer.launch({
         headless: true,
+        executablePath,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
