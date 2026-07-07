@@ -1,12 +1,27 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { InternalServerErrorException } from '@nestjs/common';
 import { PdfService } from './pdf.service';
 import { InvoiceTemplateHelper } from '../helpers/invoice-template.helper';
-import * as puppeteer from 'puppeteer';
-import * as fs from 'fs';
-import * as path from 'path';
 
-// Mock puppeteer globally
+// Menggunakan moduleNameMapper → src/__mocks__/puppeteer.ts (ESM-safe stub)
 jest.mock('puppeteer');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const puppeteerMock = require('puppeteer');
+
+// Mock seluruh modul fs dengan manual mock
+jest.mock('fs', () => ({
+  existsSync: jest.fn().mockReturnValue(true),
+  promises: {
+    mkdir: jest.fn().mockResolvedValue(undefined),
+    writeFile: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const fsMock = require('fs');
+
+// =============================================================================
+// PdfService — Unit Tests
+// =============================================================================
 
 describe('PdfService', () => {
   let service: PdfService;
@@ -18,11 +33,28 @@ describe('PdfService', () => {
     issueDate: new Date(),
     currency: 'USD',
     totalAmount: 100,
+    subtotal: 80,
+    taxAmount: 20,
+    discountAmount: 0,
+    status: 'DRAFT',
     items: [],
   };
 
   const mockHtml = '<html><body>Mock HTML Invoice</body></html>';
   const mockPdfBuffer = Buffer.from('%PDF-1.4 mock content');
+
+  // Reusable Puppeteer mock factory
+  const buildPuppeteerMocks = () => {
+    const mockPage = {
+      setContent: jest.fn().mockResolvedValue(undefined),
+      pdf: jest.fn().mockResolvedValue(mockPdfBuffer),
+    };
+    const mockBrowser = {
+      newPage: jest.fn().mockResolvedValue(mockPage),
+      close: jest.fn().mockResolvedValue(undefined),
+    };
+    return { mockPage, mockBrowser };
+  };
 
   beforeEach(async () => {
     const mockTemplateHelper: Partial<jest.Mocked<InvoiceTemplateHelper>> = {
@@ -39,29 +71,21 @@ describe('PdfService', () => {
     service = module.get<PdfService>(PdfService);
     templateHelper = module.get(InvoiceTemplateHelper);
 
-    // Mock fs promises
-    jest.spyOn(fs, 'existsSync').mockReturnValue(true);
-    jest.spyOn(fs.promises, 'mkdir').mockResolvedValue(undefined as any);
-    jest.spyOn(fs.promises, 'writeFile').mockResolvedValue(undefined as any);
+    // Reset mock state antara test
+    jest.clearAllMocks();
+    fsMock.existsSync.mockReturnValue(true);
+    fsMock.promises.mkdir.mockResolvedValue(undefined);
+    fsMock.promises.writeFile.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
-    jest.clearAllMocks();
   });
 
   describe('generateInvoicePdf()', () => {
     it('harus memanggil templateHelper.render() dengan invoice yang dikirim', async () => {
-      // Mock Puppeteer launch & page
-      const mockPage = {
-        setContent: jest.fn().mockResolvedValue(undefined),
-        pdf: jest.fn().mockResolvedValue(mockPdfBuffer),
-      };
-      const mockBrowser = {
-        newPage: jest.fn().mockResolvedValue(mockPage),
-        close: jest.fn().mockResolvedValue(undefined),
-      };
-      (puppeteer.launch as jest.Mock).mockResolvedValue(mockBrowser);
+      const { mockBrowser } = buildPuppeteerMocks();
+      puppeteerMock.launch.mockResolvedValue(mockBrowser);
 
       await service.generateInvoicePdf(mockInvoice);
 
@@ -69,21 +93,14 @@ describe('PdfService', () => {
     });
 
     it('harus berinteraksi dengan Puppeteer untuk mengisi konten dan men-generate PDF', async () => {
-      const mockPage = {
-        setContent: jest.fn().mockResolvedValue(undefined),
-        pdf: jest.fn().mockResolvedValue(mockPdfBuffer),
-      };
-      const mockBrowser = {
-        newPage: jest.fn().mockResolvedValue(mockPage),
-        close: jest.fn().mockResolvedValue(undefined),
-      };
-      (puppeteer.launch as jest.Mock).mockResolvedValue(mockBrowser);
+      const { mockPage, mockBrowser } = buildPuppeteerMocks();
+      puppeteerMock.launch.mockResolvedValue(mockBrowser);
 
       const result = await service.generateInvoicePdf(mockInvoice);
 
-      expect(puppeteer.launch).toHaveBeenCalled();
+      expect(puppeteerMock.launch).toHaveBeenCalled();
       expect(mockBrowser.newPage).toHaveBeenCalled();
-      expect(mockPage.setContent).toHaveBeenCalledWith(mockHtml, { waitUntil: 'networkidle0' });
+      expect(mockPage.setContent).toHaveBeenCalledWith(mockHtml, { waitUntil: 'load' });
       expect(mockPage.pdf).toHaveBeenCalledWith(
         expect.objectContaining({
           format: 'A4',
@@ -96,31 +113,51 @@ describe('PdfService', () => {
       expect(result.pdfPath).toContain('INV-20260706-9999.pdf');
     });
 
-    it('harus menulis file PDF ke folder disk lokal', async () => {
+    it('harus menulis file PDF ke folder disk lokal (storage/pdf/)', async () => {
+      const { mockBrowser } = buildPuppeteerMocks();
+      puppeteerMock.launch.mockResolvedValue(mockBrowser);
+
+      await service.generateInvoicePdf(mockInvoice);
+
+      expect(fsMock.promises.writeFile).toHaveBeenCalledWith(
+        expect.stringContaining('INV-20260706-9999.pdf'),
+        mockPdfBuffer,
+      );
+    });
+
+    it('harus menutup browser Puppeteer walaupun pdf() throw exception', async () => {
       const mockPage = {
         setContent: jest.fn().mockResolvedValue(undefined),
-        pdf: jest.fn().mockResolvedValue(mockPdfBuffer),
+        pdf: jest.fn().mockRejectedValue(new Error('PDF generation failed')),
       };
       const mockBrowser = {
         newPage: jest.fn().mockResolvedValue(mockPage),
         close: jest.fn().mockResolvedValue(undefined),
       };
-      (puppeteer.launch as jest.Mock).mockResolvedValue(mockBrowser);
+      puppeteerMock.launch.mockResolvedValue(mockBrowser);
 
-      const writeFileSpy = jest.spyOn(fs.promises, 'writeFile');
+      await expect(service.generateInvoicePdf(mockInvoice)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      expect(mockBrowser.close).toHaveBeenCalled();
+    });
 
-      await service.generateInvoicePdf(mockInvoice);
+    it('harus melempar InternalServerErrorException jika Puppeteer launch gagal', async () => {
+      puppeteerMock.launch.mockRejectedValue(new Error('Browser crash'));
 
-      expect(writeFileSpy).toHaveBeenCalledWith(
-        expect.stringContaining(path.join('storage', 'pdf', 'INV-20260706-9999.pdf')),
-        mockPdfBuffer,
+      await expect(service.generateInvoicePdf(mockInvoice)).rejects.toThrow(
+        InternalServerErrorException,
       );
     });
 
-    it('harus melempar InternalServerErrorException jika Puppeteer gagal', async () => {
-      (puppeteer.launch as jest.Mock).mockRejectedValue(new Error('Browser crash'));
+    it('harus melempar InternalServerErrorException jika templateHelper.render() gagal', async () => {
+      templateHelper.render.mockImplementation(() => {
+        throw new Error('Template render error');
+      });
 
-      await expect(service.generateInvoicePdf(mockInvoice)).rejects.toThrow();
+      await expect(service.generateInvoicePdf(mockInvoice)).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 });

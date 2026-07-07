@@ -38,6 +38,7 @@
     "dotenv": "^17.4.2",
     "joi": "^18.2.3",
     "pg": "^8.22.0",
+    "puppeteer": "^25.3.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
@@ -78,6 +79,12 @@
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "moduleNameMapper": {
+      "^puppeteer$": "<rootDir>/__mocks__/puppeteer.ts",
+      "\\.\\./generated/prisma/client(\\.js)?$": "<rootDir>/__mocks__/prisma-client.ts",
+      ".*/generated/prisma/client(\\.js)?$": "<rootDir>/__mocks__/prisma-client.ts",
+      "^@prisma/adapter-pg$": "<rootDir>/__mocks__/prisma-adapter-pg.ts"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

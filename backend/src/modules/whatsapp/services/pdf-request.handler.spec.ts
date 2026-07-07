@@ -18,9 +18,10 @@ describe('PdfRequestHandler', () => {
   const mockPhone = '628123456789';
   const mockInvoiceNumber = 'INV-20260706-0001';
   const mockButtonId = `pdf_req:${mockInvoiceNumber}`;
+  const mockInvoiceId = 'inv-uuid-123';
 
   const mockInvoice = {
-    id: 'inv-uuid-123',
+    id: mockInvoiceId,
     invoiceNumber: mockInvoiceNumber,
     merchantName: 'Warung Kopi',
     totalAmount: 15000,
@@ -31,6 +32,7 @@ describe('PdfRequestHandler', () => {
     const mockPrisma: any = {
       invoice: {
         findUnique: jest.fn(),
+        update: jest.fn().mockResolvedValue(undefined),
       },
     };
 
@@ -65,6 +67,9 @@ describe('PdfRequestHandler', () => {
     jest.restoreAllMocks();
   });
 
+  // ---------------------------------------------------------------------------
+  // isPdfRequest()
+  // ---------------------------------------------------------------------------
   describe('isPdfRequest()', () => {
     it('harus mengembalikan true untuk button ID dengan prefix pdf_req:', () => {
       expect(handler.isPdfRequest('pdf_req:INV-123')).toBe(true);
@@ -77,6 +82,21 @@ describe('PdfRequestHandler', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // getPdfStoragePath()
+  // ---------------------------------------------------------------------------
+  describe('getPdfStoragePath()', () => {
+    it('harus mengembalikan path yang mengandung invoiceNumber.pdf di dalam storage/pdf/', () => {
+      const pdfPath = handler.getPdfStoragePath('INV-20260706-0001');
+      expect(pdfPath).toContain('storage');
+      expect(pdfPath).toContain('pdf');
+      expect(pdfPath).toContain('INV-20260706-0001.pdf');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // handle()
+  // ---------------------------------------------------------------------------
   describe('handle()', () => {
     it('harus melewati proses jika nomor invoice kosong', async () => {
       await handler.handle(mockPhone, 'pdf_req:');
@@ -109,7 +129,35 @@ describe('PdfRequestHandler', () => {
       expect(graphClient.sendTextMessage).not.toHaveBeenCalled();
     });
 
-    it('harus menyerap (suppress) error jika database throw exception', async () => {
+    it('harus memperbarui pdfUrl di database setelah PDF berhasil dikirim', async () => {
+      prisma.invoice.findUnique.mockResolvedValue(mockInvoice as any);
+
+      await handler.handle(mockPhone, mockButtonId);
+
+      expect(prisma.invoice.update).toHaveBeenCalledWith({
+        where: { id: mockInvoiceId },
+        data: { pdfUrl: expect.stringContaining(`${mockInvoiceNumber}.pdf`) },
+      });
+    });
+
+    it('harus tidak memanggil prisma.update jika invoice tidak ditemukan', async () => {
+      prisma.invoice.findUnique.mockResolvedValue(null);
+
+      await handler.handle(mockPhone, mockButtonId);
+
+      expect(prisma.invoice.update).not.toHaveBeenCalled();
+    });
+
+    it('harus menyerap error update pdfUrl tanpa mempengaruhi flow utama', async () => {
+      prisma.invoice.findUnique.mockResolvedValue(mockInvoice as any);
+      prisma.invoice.update.mockRejectedValue(new Error('DB update gagal'));
+
+      // Tidak boleh throw — update pdfUrl bersifat best-effort
+      await expect(handler.handle(mockPhone, mockButtonId)).resolves.toBeUndefined();
+      expect(notificationService.sendInvoicePdf).toHaveBeenCalled();
+    });
+
+    it('harus menyerap (suppress) error jika database findUnique throw exception', async () => {
       prisma.invoice.findUnique.mockRejectedValue(new Error('Koneksi DB putus'));
 
       await expect(handler.handle(mockPhone, mockButtonId)).resolves.toBeUndefined();

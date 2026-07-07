@@ -1,17 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { InvoiceTemplateHelper } from './invoice-template.helper';
-import * as fs from 'fs';
-import * as path from 'path';
 
 // =============================================================================
 // InvoiceTemplateHelper — Unit Tests
 // =============================================================================
+// NOTA BENE:
+//   jest.mock() é hoisted ao topo do arquivo antes de qualquer declaração.
+//   Por isso NÃO é possível referenciar variáveis `const`/`let` declaradas
+//   fora do factory dentro da factory de jest.mock() — causaria ReferenceError.
+//   A solução é embutir o conteúdo diretamente dentro do factory.
+// =============================================================================
 
-describe('InvoiceTemplateHelper', () => {
-  let helper: InvoiceTemplateHelper;
-
-  // Mock template file content
-  const mockTemplateContent = `
+jest.mock('fs', () => ({
+  existsSync: jest.fn().mockReturnValue(true),
+  readFileSync: jest.fn().mockReturnValue(`
     <html>
       <body>
         <h1>{{invoiceNumber}}</h1>
@@ -20,31 +22,25 @@ describe('InvoiceTemplateHelper', () => {
         <p>{{currency}}</p>
         <p>{{status}}</p>
         <p>{{statusClass}}</p>
-        <table><tbody>{{items}}</tbody></table>
-        <div>{{subtotalRow}}</div>
-        <div>{{taxRow}}</div>
-        <div>{{discountRow}}</div>
-        <h3>{{totalAmount}}</h3>
+        <table class="items-table"><tbody>{{items}}</tbody></table>
+        <div class="summary-card">
+          {{subtotalRow}}
+          {{taxRow}}
+          {{discountRow}}
+          <div class="summary-total-row"><span>{{totalAmount}}</span></div>
+        </div>
         <footer>{{generatedAt}}</footer>
       </body>
     </html>
-  `;
+  `),
+  promises: {
+    mkdir: jest.fn().mockResolvedValue(undefined),
+    writeFile: jest.fn().mockResolvedValue(undefined),
+  },
+}));
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [InvoiceTemplateHelper],
-    }).compile();
-
-    helper = module.get<InvoiceTemplateHelper>(InvoiceTemplateHelper);
-
-    // Mock fs.existsSync & fs.readFileSync globally for helper instance template resolution
-    jest.spyOn(fs, 'existsSync').mockReturnValue(true);
-    jest.spyOn(fs, 'readFileSync').mockReturnValue(mockTemplateContent);
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
+describe('InvoiceTemplateHelper', () => {
+  let helper: InvoiceTemplateHelper;
 
   const mockInvoice = {
     invoiceNumber: 'INV-20260706-0001',
@@ -62,6 +58,21 @@ describe('InvoiceTemplateHelper', () => {
     ],
   };
 
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [InvoiceTemplateHelper],
+    }).compile();
+
+    helper = module.get<InvoiceTemplateHelper>(InvoiceTemplateHelper);
+
+    // Reset internal template cache agar setiap test mendapatkan state bersih
+    (helper as any).templateHtml = null;
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('render()', () => {
     it('harus mengganti placeholder dasar: invoiceNumber, merchantName, currency, status', () => {
       const html = helper.render(mockInvoice);
@@ -69,7 +80,7 @@ describe('InvoiceTemplateHelper', () => {
       expect(html).toContain('Indomaret Keren');
       expect(html).toContain('IDR');
       expect(html).toContain('PAID');
-      expect(html).toContain('paid'); // statusClass
+      expect(html).toContain('paid'); // statusClass lowercase
     });
 
     it('harus memformat tanggal transaksi (issueDate) ke bahasa Indonesia', () => {
@@ -84,6 +95,9 @@ describe('InvoiceTemplateHelper', () => {
       expect(html).toContain('IDR 5,000.00');
       expect(html).toContain('IDR 6,000.00');
       expect(html).toContain('IDR 10,000.00');
+      // Verifikasi kelas CSS premium
+      expect(html).toContain('class="item-name"');
+      expect(html).toContain('class="center"');
     });
 
     it('harus menampilkan baris item default ketika item kosong', () => {
@@ -94,13 +108,20 @@ describe('InvoiceTemplateHelper', () => {
 
     it('harus merender baris subtotal, pajak, dan diskon secara kondisional jika > 0', () => {
       const html = helper.render(mockInvoice);
+      // Label teks
       expect(html).toContain('Subtotal');
       expect(html).toContain('Pajak');
       expect(html).toContain('Diskon');
+      // Nilai nominal
       expect(html).toContain('IDR 15,000.00');
       expect(html).toContain('IDR 1,500.00');
       expect(html).toContain('-IDR 500.00');
-      expect(html).toContain('IDR 16,000.00'); // total
+      expect(html).toContain('IDR 16,000.00');
+      // Struktur div baru (bukan tr/td)
+      expect(html).toContain('class="summary-row"');
+      expect(html).toContain('class="summary-label"');
+      expect(html).toContain('class="summary-value"');
+      expect(html).toContain('class="summary-value discount"');
     });
 
     it('harus tidak merender baris subtotal, pajak, dan diskon jika bernilai 0', () => {
@@ -115,6 +136,17 @@ describe('InvoiceTemplateHelper', () => {
       expect(html).not.toContain('Subtotal');
       expect(html).not.toContain('Pajak');
       expect(html).not.toContain('Diskon');
+    });
+
+    it('harus menggunakan "Unknown Merchant" jika merchantName tidak ada', () => {
+      const noMerchantInvoice = { ...mockInvoice, merchantName: undefined };
+      const html = helper.render(noMerchantInvoice);
+      expect(html).toContain('Unknown Merchant');
+    });
+
+    it('harus menampilkan generatedAt timestamp WIB di footer', () => {
+      const html = helper.render(mockInvoice);
+      expect(html).toContain('WIB');
     });
   });
 });

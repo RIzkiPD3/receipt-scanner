@@ -1,0 +1,10 @@
+# PDF Controllers
+
+Reserved for HTTP controllers that expose PDF-related REST endpoints in the future.
+
+Currently, PDF generation is triggered internally via:
+- `PdfRequestHandler` (WhatsApp interactive button reply)
+- `WhatsAppNotificationService.sendInvoicePdf()` (orchestrator)
+
+If a REST endpoint for PDF download is needed (e.g. `GET /api/invoices/:id/pdf`),
+add the controller here and register it in `PdfModule`.

@@ -57,7 +57,7 @@ export class PdfService {
       const page = await browser.newPage();
       
       this.logger.log(`Memasukkan konten HTML ke Puppeteer page...`, PdfService.name);
-      await page.setContent(html, { waitUntil: 'networkidle0' });
+      await page.setContent(html, { waitUntil: 'load' });
 
       this.logger.log(`Men-generate buffer PDF (A4, margin 20mm)...`, PdfService.name);
       const pdfBuffer = await page.pdf({

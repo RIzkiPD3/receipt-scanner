@@ -291,7 +291,14 @@ export class WhatsAppGraphClient {
     formData.append('messaging_product', 'whatsapp');
     formData.append('type', mimeType);
     
-    const blob = new Blob([fileBuffer], { type: mimeType });
+    // Ekstrak ArrayBuffer murni dari Buffer Node.js untuk kompatibilitas Blob.
+    // Buffer.buffer bertipe ArrayBufferLike (mencakup SharedArrayBuffer) yang
+    // tidak kompatibel dengan BlobPart yang membutuhkan ArrayBuffer murni.
+    const arrayBuf = fileBuffer.buffer.slice(
+      fileBuffer.byteOffset,
+      fileBuffer.byteOffset + fileBuffer.byteLength,
+    ) as ArrayBuffer;
+    const blob = new Blob([arrayBuf], { type: mimeType });
     formData.append('file', blob, filename);
 
     try {
