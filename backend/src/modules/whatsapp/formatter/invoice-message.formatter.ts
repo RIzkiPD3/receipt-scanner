@@ -57,7 +57,9 @@ export class InvoiceMessageFormatter {
         const price = Number(item.unitPrice);
         const total = Number(item.totalPrice);
         if (total > 0) {
-          lines.push(`  • ${item.name} (${qty}x @ ${this.formatCurrency(price, invoice.currency)}) = ${this.formatCurrency(total, invoice.currency)}`);
+          lines.push(
+            `  • ${item.name} (${qty}x @ ${this.formatCurrency(price, invoice.currency)}) = ${this.formatCurrency(total, invoice.currency)}`,
+          );
         } else {
           lines.push(`  • ${item.name} (${qty}x)`);
         }
@@ -72,15 +74,23 @@ export class InvoiceMessageFormatter {
     const total = Number(invoice.totalAmount);
 
     if (subtotal > 0) {
-      lines.push(`💰 Subtotal   : ${this.formatCurrency(subtotal, invoice.currency)}`);
+      lines.push(
+        `💰 Subtotal   : ${this.formatCurrency(subtotal, invoice.currency)}`,
+      );
     }
     if (tax > 0) {
-      lines.push(`🏛️ Pajak      : ${this.formatCurrency(tax, invoice.currency)}`);
+      lines.push(
+        `🏛️ Pajak      : ${this.formatCurrency(tax, invoice.currency)}`,
+      );
     }
     if (discount > 0) {
-      lines.push(`🎁 Diskon     : -${this.formatCurrency(discount, invoice.currency)}`);
+      lines.push(
+        `🎁 Diskon     : -${this.formatCurrency(discount, invoice.currency)}`,
+      );
     }
-    lines.push(`💵 *Total     : ${this.formatCurrency(total, invoice.currency)}*`);
+    lines.push(
+      `💵 *Total     : ${this.formatCurrency(total, invoice.currency)}*`,
+    );
     lines.push(`━━━━━━━━━━━━━━━━━━━━━━`);
     lines.push(`📊 Status     : ${invoice.status}`);
     lines.push(``);

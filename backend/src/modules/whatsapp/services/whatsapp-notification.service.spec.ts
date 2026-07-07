@@ -31,7 +31,8 @@ describe('WhatsAppNotificationService', () => {
   };
 
   const validPhone = '628123456789';
-  const formattedMessage = '🧾 *INVOICE BERHASIL DIBUAT*\n━━━━━━━━━━━━━━━━━━━━━━\n...';
+  const formattedMessage =
+    '🧾 *INVOICE BERHASIL DIBUAT*\n━━━━━━━━━━━━━━━━━━━━━━\n...';
   const mockPdfBuffer = Buffer.from('%PDF-mock');
   const mockPdfPath = '/storage/pdf/INV-20260704-0001.pdf';
 
@@ -67,7 +68,9 @@ describe('WhatsAppNotificationService', () => {
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
-    service = module.get<WhatsAppNotificationService>(WhatsAppNotificationService);
+    service = module.get<WhatsAppNotificationService>(
+      WhatsAppNotificationService,
+    );
     graphClient = module.get(WhatsAppGraphClient);
     formatter = module.get(InvoiceMessageFormatter);
     pdfService = module.get(PdfService);
@@ -98,9 +101,13 @@ describe('WhatsAppNotificationService', () => {
     });
 
     it('harus menyerap error jika graphClient gagal mengirim button message', async () => {
-      graphClient.sendInteractiveButtonMessage.mockRejectedValue(new Error('API Error'));
+      graphClient.sendInteractiveButtonMessage.mockRejectedValue(
+        new Error('API Error'),
+      );
 
-      await expect(service.sendInvoiceSummary(validPhone, mockInvoice)).resolves.toBeUndefined();
+      await expect(
+        service.sendInvoiceSummary(validPhone, mockInvoice),
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -113,7 +120,7 @@ describe('WhatsAppNotificationService', () => {
 
       // 1. PDF generated
       expect(pdfService.generateInvoicePdf).toHaveBeenCalledWith(mockInvoice);
-      
+
       // 2. Uploaded
       expect(graphClient.uploadMedia).toHaveBeenCalledWith(
         mockPdfBuffer,
@@ -131,7 +138,9 @@ describe('WhatsAppNotificationService', () => {
     });
 
     it('harus memberi tahu user lewat teks jika pembuatan PDF gagal', async () => {
-      pdfService.generateInvoicePdf.mockRejectedValue(new Error('Puppeteer crash'));
+      pdfService.generateInvoicePdf.mockRejectedValue(
+        new Error('Puppeteer crash'),
+      );
 
       await service.sendInvoicePdf(validPhone, mockInvoice);
 
@@ -157,7 +166,9 @@ describe('WhatsAppNotificationService', () => {
     it('harus menyerap (suppress) error jika pengiriman dokumen gagal di tahap akhir', async () => {
       graphClient.sendDocumentMessage.mockRejectedValue(new Error('Timeout'));
 
-      await expect(service.sendInvoicePdf(validPhone, mockInvoice)).resolves.toBeUndefined();
+      await expect(
+        service.sendInvoicePdf(validPhone, mockInvoice),
+      ).resolves.toBeUndefined();
     });
   });
 });

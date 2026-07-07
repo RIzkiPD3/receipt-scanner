@@ -36,7 +36,9 @@ describe('PdfRequestHandler', () => {
       },
     };
 
-    const mockNotificationService: Partial<jest.Mocked<WhatsAppNotificationService>> = {
+    const mockNotificationService: Partial<
+      jest.Mocked<WhatsAppNotificationService>
+    > = {
       sendInvoicePdf: jest.fn().mockResolvedValue(undefined),
     };
 
@@ -48,7 +50,10 @@ describe('PdfRequestHandler', () => {
       providers: [
         PdfRequestHandler,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: WhatsAppNotificationService, useValue: mockNotificationService },
+        {
+          provide: WhatsAppNotificationService,
+          useValue: mockNotificationService,
+        },
         { provide: WhatsAppGraphClient, useValue: mockGraphClient },
       ],
     }).compile();
@@ -125,7 +130,10 @@ describe('PdfRequestHandler', () => {
       await handler.handle(mockPhone, mockButtonId);
 
       expect(prisma.invoice.findUnique).toHaveBeenCalled();
-      expect(notificationService.sendInvoicePdf).toHaveBeenCalledWith(mockPhone, mockInvoice);
+      expect(notificationService.sendInvoicePdf).toHaveBeenCalledWith(
+        mockPhone,
+        mockInvoice,
+      );
       expect(graphClient.sendTextMessage).not.toHaveBeenCalled();
     });
 
@@ -153,14 +161,20 @@ describe('PdfRequestHandler', () => {
       prisma.invoice.update.mockRejectedValue(new Error('DB update gagal'));
 
       // Tidak boleh throw — update pdfUrl bersifat best-effort
-      await expect(handler.handle(mockPhone, mockButtonId)).resolves.toBeUndefined();
+      await expect(
+        handler.handle(mockPhone, mockButtonId),
+      ).resolves.toBeUndefined();
       expect(notificationService.sendInvoicePdf).toHaveBeenCalled();
     });
 
     it('harus menyerap (suppress) error jika database findUnique throw exception', async () => {
-      prisma.invoice.findUnique.mockRejectedValue(new Error('Koneksi DB putus'));
+      prisma.invoice.findUnique.mockRejectedValue(
+        new Error('Koneksi DB putus'),
+      );
 
-      await expect(handler.handle(mockPhone, mockButtonId)).resolves.toBeUndefined();
+      await expect(
+        handler.handle(mockPhone, mockButtonId),
+      ).resolves.toBeUndefined();
     });
   });
 });

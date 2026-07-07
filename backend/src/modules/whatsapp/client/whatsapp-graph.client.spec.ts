@@ -30,7 +30,7 @@ describe('WhatsAppGraphClient', () => {
           WHATSAPP_PHONE_NUMBER_ID: MOCK_PHONE_ID,
         };
         return envMap[key];
-      }),
+      }) as any,
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -124,12 +124,14 @@ describe('WhatsAppGraphClient', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 401,
-        text: jest.fn().mockResolvedValue('{"error":{"message":"Invalid OAuth token"}}'),
+        text: jest
+          .fn()
+          .mockResolvedValue('{"error":{"message":"Invalid OAuth token"}}'),
       });
 
-      await expect(client.sendTextMessage(recipientPhone, messageText)).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(
+        client.sendTextMessage(recipientPhone, messageText),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 
@@ -138,22 +140,28 @@ describe('WhatsAppGraphClient', () => {
   // ---------------------------------------------------------------------------
   describe('sendInteractiveButtonMessage()', () => {
     const bodyText = 'Invoice berhasil dibuat!';
-    const buttons = [
-      { id: 'pdf_req:INV-123', title: '📄 Buatkan PDF' },
-    ];
+    const buttons = [{ id: 'pdf_req:INV-123', title: '📄 Buatkan PDF' }];
 
     it('harus memanggil POST ke endpoint messages dengan payload interactive', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        text: jest.fn().mockResolvedValue('{"messages":[{"id":"wamid.button"}]}'),
+        text: jest
+          .fn()
+          .mockResolvedValue('{"messages":[{"id":"wamid.button"}]}'),
       });
 
-      await client.sendInteractiveButtonMessage(recipientPhone, bodyText, buttons);
+      await client.sendInteractiveButtonMessage(
+        recipientPhone,
+        bodyText,
+        buttons,
+      );
 
       const [calledUrl, options] = mockFetch.mock.calls[0];
-      expect(calledUrl).toBe(`https://graph.facebook.com/v21.0/${MOCK_PHONE_ID}/messages`);
+      expect(calledUrl).toBe(
+        `https://graph.facebook.com/v21.0/${MOCK_PHONE_ID}/messages`,
+      );
       expect(options.method).toBe('POST');
-      
+
       const body = JSON.parse(options.body);
       expect(body).toMatchObject({
         messaging_product: 'whatsapp',
@@ -179,7 +187,9 @@ describe('WhatsAppGraphClient', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 400,
-        text: jest.fn().mockResolvedValue('{"error":{"message":"Invalid buttons"}}'),
+        text: jest
+          .fn()
+          .mockResolvedValue('{"error":{"message":"Invalid buttons"}}'),
       });
 
       await expect(
@@ -202,11 +212,17 @@ describe('WhatsAppGraphClient', () => {
         text: jest.fn().mockResolvedValue('{"id":"media-uploaded-id-xyz"}'),
       });
 
-      const mediaId = await client.uploadMedia(mockFileBuffer, mockFilename, mockMimeType);
+      const mediaId = await client.uploadMedia(
+        mockFileBuffer,
+        mockFilename,
+        mockMimeType,
+      );
 
       expect(mediaId).toBe('media-uploaded-id-xyz');
       const [calledUrl, options] = mockFetch.mock.calls[0];
-      expect(calledUrl).toBe(`https://graph.facebook.com/v21.0/${MOCK_PHONE_ID}/media`);
+      expect(calledUrl).toBe(
+        `https://graph.facebook.com/v21.0/${MOCK_PHONE_ID}/media`,
+      );
       expect(options.method).toBe('POST');
       expect(options.body).toBeInstanceOf(FormData);
     });
@@ -238,10 +254,17 @@ describe('WhatsAppGraphClient', () => {
         text: jest.fn().mockResolvedValue('{"messages":[{"id":"wamid.doc"}]}'),
       });
 
-      await client.sendDocumentMessage(recipientPhone, mockMediaId, mockFilename, mockCaption);
+      await client.sendDocumentMessage(
+        recipientPhone,
+        mockMediaId,
+        mockFilename,
+        mockCaption,
+      );
 
       const [calledUrl, options] = mockFetch.mock.calls[0];
-      expect(calledUrl).toBe(`https://graph.facebook.com/v21.0/${MOCK_PHONE_ID}/messages`);
+      expect(calledUrl).toBe(
+        `https://graph.facebook.com/v21.0/${MOCK_PHONE_ID}/messages`,
+      );
       expect(options.method).toBe('POST');
 
       const body = JSON.parse(options.body);
@@ -265,7 +288,12 @@ describe('WhatsAppGraphClient', () => {
       });
 
       await expect(
-        client.sendDocumentMessage(recipientPhone, mockMediaId, mockFilename, mockCaption),
+        client.sendDocumentMessage(
+          recipientPhone,
+          mockMediaId,
+          mockFilename,
+          mockCaption,
+        ),
       ).rejects.toThrow(InternalServerErrorException);
     });
   });

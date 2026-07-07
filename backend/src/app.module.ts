@@ -77,5 +77,3 @@ import { PdfModule } from './modules/pdf/pdf.module';
   providers: [],
 })
 export class AppModule {}
-
-

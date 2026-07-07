@@ -67,4 +67,3 @@ export class CreateReceiptDto {
   @IsOptional()
   receiptId?: string;
 }
-

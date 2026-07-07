@@ -45,7 +45,10 @@ describe('Receipt Scanner System (e2e)', () => {
           return db.users.find((u) => u.id === args.where.id) || null;
         }
         if (args.where.phoneNumber) {
-          return db.users.find((u) => u.phoneNumber === args.where.phoneNumber) || null;
+          return (
+            db.users.find((u) => u.phoneNumber === args.where.phoneNumber) ||
+            null
+          );
         }
         return null;
       }),
@@ -61,14 +64,22 @@ describe('Receipt Scanner System (e2e)', () => {
     },
     receipt: {
       create: jest.fn().mockImplementation((args) => {
-        const r = { id: `receipt-id-${Date.now()}`, status: 'PENDING', createdAt: new Date(), ...args.data };
+        const r = {
+          id: `receipt-id-${Date.now()}`,
+          status: 'PENDING',
+          createdAt: new Date(),
+          ...args.data,
+        };
         db.receipts.push(r);
         return r;
       }),
       findUnique: jest.fn().mockImplementation((args) => {
         const r = db.receipts.find((item) => item.id === args.where.id);
         if (r && args.include?.items) {
-          return { ...r, items: db.receiptItems.filter((i) => i.receiptId === r.id) };
+          return {
+            ...r,
+            items: db.receiptItems.filter((i) => i.receiptId === r.id),
+          };
         }
         return r || null;
       }),
@@ -76,13 +87,18 @@ describe('Receipt Scanner System (e2e)', () => {
         const r = db.receipts.find((item) => item.id === args.where.id);
         if (!r) throw new Error('Not found');
         if (args.include?.items) {
-          return { ...r, items: db.receiptItems.filter((i) => i.receiptId === r.id) };
+          return {
+            ...r,
+            items: db.receiptItems.filter((i) => i.receiptId === r.id),
+          };
         }
         return r;
       }),
       findFirst: jest.fn().mockImplementation((args) => {
         if (args.where?.userId) {
-          return db.receipts.find((r) => r.userId === args.where.userId) || null;
+          return (
+            db.receipts.find((r) => r.userId === args.where.userId) || null
+          );
         }
         return db.receipts[0] || null;
       }),
@@ -118,14 +134,20 @@ describe('Receipt Scanner System (e2e)', () => {
       }),
       findUnique: jest.fn().mockImplementation((args) => {
         return (
-          db.invoices.find((i) => i.id === args.where.id || i.invoiceNumber === args.where.invoiceNumber) ||
-          null
+          db.invoices.find(
+            (i) =>
+              i.id === args.where.id ||
+              i.invoiceNumber === args.where.invoiceNumber,
+          ) || null
         );
       }),
       findUniqueOrThrow: jest.fn().mockImplementation((args) => {
         const inv = db.invoices.find((i) => i.id === args.where.id);
         if (!inv) throw new Error('Not found');
-        return { ...inv, items: db.invoiceItems.filter((item) => item.invoiceId === inv.id) };
+        return {
+          ...inv,
+          items: db.invoiceItems.filter((item) => item.invoiceId === inv.id),
+        };
       }),
       findFirst: jest.fn().mockImplementation((args) => {
         return db.invoices[0] || null;
@@ -189,7 +211,9 @@ describe('Receipt Scanner System (e2e)', () => {
     mockStorageProvider = {
       upload: jest.fn().mockResolvedValue('temp/uploads/media-123.jpg'),
       delete: jest.fn().mockResolvedValue(undefined),
-      getPublicUrl: jest.fn().mockReturnValue('http://test-server/uploads/media-123.jpg'),
+      getPublicUrl: jest
+        .fn()
+        .mockReturnValue('http://test-server/uploads/media-123.jpg'),
     };
 
     const mockPdfService = {
@@ -259,7 +283,9 @@ describe('Receipt Scanner System (e2e)', () => {
                   display_phone_number: '12345',
                   phone_number_id: '12345',
                 },
-                contacts: [{ profile: { name: 'E2E Tester' }, wa_id: userPhone }],
+                contacts: [
+                  { profile: { name: 'E2E Tester' }, wa_id: userPhone },
+                ],
                 messages: [
                   {
                     from: userPhone,
@@ -318,8 +344,18 @@ describe('Receipt Scanner System (e2e)', () => {
       tax: 4500,
       total: 49500,
       items: [
-        { name: 'Susu UHT 1L', quantity: 2, unitPrice: 15000, totalPrice: 30000 },
-        { name: 'Kopi Kapal Api', quantity: 1, unitPrice: 15000, totalPrice: 15000 },
+        {
+          name: 'Susu UHT 1L',
+          quantity: 2,
+          unitPrice: 15000,
+          totalPrice: 30000,
+        },
+        {
+          name: 'Kopi Kapal Api',
+          quantity: 1,
+          unitPrice: 15000,
+          totalPrice: 15000,
+        },
       ],
       imageUrl: pendingReceipt?.imageUrl,
     };
@@ -337,7 +373,9 @@ describe('Receipt Scanner System (e2e)', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Verifikasi Receipt diperbarui ke PROCESSED
-    const processedReceipt = db.receipts.find((item) => item.id === pendingReceipt?.id);
+    const processedReceipt = db.receipts.find(
+      (item) => item.id === pendingReceipt?.id,
+    );
     expect(processedReceipt?.status).toBe('PROCESSED');
     expect(db.receiptItems.length).toBe(2);
 
@@ -378,7 +416,9 @@ describe('Receipt Scanner System (e2e)', () => {
                   display_phone_number: '12345',
                   phone_number_id: '12345',
                 },
-                contacts: [{ profile: { name: 'E2E Tester' }, wa_id: userPhone }],
+                contacts: [
+                  { profile: { name: 'E2E Tester' }, wa_id: userPhone },
+                ],
                 messages: [
                   {
                     from: userPhone,

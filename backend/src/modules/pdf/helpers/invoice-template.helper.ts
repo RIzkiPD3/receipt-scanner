@@ -39,7 +39,10 @@ export class InvoiceTemplateHelper {
 
     for (const p of pathsToTry) {
       if (fs.existsSync(p)) {
-        this.logger.log(`Template invoice HTML ditemukan di: ${p}`, InvoiceTemplateHelper.name);
+        this.logger.log(
+          `Template invoice HTML ditemukan di: ${p}`,
+          InvoiceTemplateHelper.name,
+        );
         this.templateHtml = fs.readFileSync(p, 'utf8');
         return this.templateHtml;
       }
@@ -94,8 +97,10 @@ export class InvoiceTemplateHelper {
         const price = Number(item.unitPrice);
         const total = Number(item.totalPrice);
 
-        const priceStr = total > 0 ? this.formatCurrency(price, invoice.currency) : '-';
-        const totalStr = total > 0 ? this.formatCurrency(total, invoice.currency) : '-';
+        const priceStr =
+          total > 0 ? this.formatCurrency(price, invoice.currency) : '-';
+        const totalStr =
+          total > 0 ? this.formatCurrency(total, invoice.currency) : '-';
 
         itemsHtml += `
           <tr>
@@ -173,7 +178,10 @@ export class InvoiceTemplateHelper {
     // -------------------------------------------------------------------------
     const rendered = template
       .replace(/\{\{invoiceNumber\}\}/g, invoice.invoiceNumber)
-      .replace(/\{\{merchantName\}\}/g, invoice.merchantName || 'Unknown Merchant')
+      .replace(
+        /\{\{merchantName\}\}/g,
+        invoice.merchantName || 'Unknown Merchant',
+      )
       .replace(/\{\{issueDate\}\}/g, issueDateStr)
       .replace(/\{\{currency\}\}/g, invoice.currency || 'USD')
       .replace(/\{\{status\}\}/g, invoice.status || 'DRAFT')
@@ -182,7 +190,10 @@ export class InvoiceTemplateHelper {
       .replace(/\{\{subtotalRow\}\}/g, subtotalRow)
       .replace(/\{\{taxRow\}\}/g, taxRow)
       .replace(/\{\{discountRow\}\}/g, discountRow)
-      .replace(/\{\{totalAmount\}\}/g, this.formatCurrency(total, invoice.currency))
+      .replace(
+        /\{\{totalAmount\}\}/g,
+        this.formatCurrency(total, invoice.currency),
+      )
       .replace(/\{\{generatedAt\}\}/g, generatedAtStr);
 
     this.logger.log(

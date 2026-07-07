@@ -26,8 +26,13 @@ export class LocalStorageProvider implements StorageProvider {
    * Menulis file Buffer ke disk lokal.
    * @returns Path relatif lokal dari file yang disimpan
    */
-  async upload(fileBuffer: Buffer, filename: string, mimeType: string): Promise<string> {
-    const uploadDir = this.configService.get<string>('TEMP_UPLOAD_DIR') || 'temp/uploads';
+  async upload(
+    fileBuffer: Buffer,
+    filename: string,
+    mimeType: string,
+  ): Promise<string> {
+    const uploadDir =
+      this.configService.get<string>('TEMP_UPLOAD_DIR') || 'temp/uploads';
 
     // Pastikan direktori tujuan ada (buat secara rekursif jika belum ada)
     await fs.promises.mkdir(uploadDir, { recursive: true });
@@ -48,12 +53,16 @@ export class LocalStorageProvider implements StorageProvider {
    * Kegagalan tidak melempar exception agar proses bisnis tidak terhenti.
    */
   async delete(filename: string): Promise<void> {
-    const uploadDir = this.configService.get<string>('TEMP_UPLOAD_DIR') || 'temp/uploads';
+    const uploadDir =
+      this.configService.get<string>('TEMP_UPLOAD_DIR') || 'temp/uploads';
     const localPath = path.join(uploadDir, filename);
 
     try {
       await fs.promises.unlink(localPath);
-      this.logger.debug(`File berhasil dihapus: ${localPath}`, LocalStorageProvider.name);
+      this.logger.debug(
+        `File berhasil dihapus: ${localPath}`,
+        LocalStorageProvider.name,
+      );
     } catch (error) {
       this.logger.warn(
         `Gagal menghapus file ${localPath}: ${error.message}`,
@@ -68,7 +77,8 @@ export class LocalStorageProvider implements StorageProvider {
    * Contoh: http://localhost:3000/uploads/MEDIA_ID_123.jpeg
    */
   getUrl(filename: string): string {
-    const appUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3000';
+    const appUrl =
+      this.configService.get<string>('APP_URL') || 'http://localhost:3000';
     return `${appUrl}/uploads/${filename}`;
   }
 }

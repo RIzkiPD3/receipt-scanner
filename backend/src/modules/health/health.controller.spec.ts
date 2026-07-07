@@ -18,9 +18,7 @@ describe('HealthController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [HealthController],
-      providers: [
-        { provide: PrismaService, useValue: mockPrisma },
-      ],
+      providers: [{ provide: PrismaService, useValue: mockPrisma }],
     }).compile();
 
     controller = module.get<HealthController>(HealthController);
@@ -41,9 +39,13 @@ describe('HealthController', () => {
   });
 
   it('harus melempar ServiceUnavailableException jika koneksi DB bermasalah', async () => {
-    prisma.$queryRawUnsafe.mockRejectedValue(new Error('Koneksi database terputus'));
+    prisma.$queryRawUnsafe.mockRejectedValue(
+      new Error('Koneksi database terputus'),
+    );
 
-    await expect(controller.getHealth()).rejects.toThrow(ServiceUnavailableException);
+    await expect(controller.getHealth()).rejects.toThrow(
+      ServiceUnavailableException,
+    );
     expect(prisma.$queryRawUnsafe).toHaveBeenCalledWith('SELECT 1');
   });
 });

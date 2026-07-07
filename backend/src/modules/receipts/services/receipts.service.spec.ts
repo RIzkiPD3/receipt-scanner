@@ -64,34 +64,62 @@ describe('ReceiptsService', () => {
     };
 
     it('harus membuat receipt baru dan memicu generateInvoice jika receiptId tidak disediakan', async () => {
-      const mockUser = { id: 'user-123', phoneNumber: '+628000000000', name: 'Default User' };
+      const mockUser = {
+        id: 'user-123',
+        phoneNumber: '+628000000000',
+        name: 'Default User',
+      };
       prisma.user.findUnique.mockResolvedValue(mockUser as any);
-      
-      const mockReceipt = { id: 'receipt-123', status: 'PROCESSED', ...mockDto };
+
+      const mockReceipt = {
+        id: 'receipt-123',
+        status: 'PROCESSED',
+        ...mockDto,
+      };
       repository.create.mockResolvedValue(mockReceipt as any);
-      invoicesService.generateInvoice.mockResolvedValue({ id: 'invoice-123', invoiceNumber: 'INV-123' } as any);
+      invoicesService.generateInvoice.mockResolvedValue({
+        id: 'invoice-123',
+        invoiceNumber: 'INV-123',
+      } as any);
 
       const result = await service.createReceipt(mockDto);
 
       expect(repository.create).toHaveBeenCalled();
-      expect(invoicesService.generateInvoice).toHaveBeenCalledWith('receipt-123');
+      expect(invoicesService.generateInvoice).toHaveBeenCalledWith(
+        'receipt-123',
+      );
       expect(result).toEqual(mockReceipt);
     });
 
     it('harus mengupdate receipt berstatus PENDING jika receiptId disediakan dan ditemukan', async () => {
       const dtoWithId = { ...mockDto, receiptId: 'pending-receipt-123' };
-      
-      repository.findById.mockResolvedValue({ id: 'pending-receipt-123', status: 'PENDING' } as any);
-      
-      const mockReceipt = { id: 'pending-receipt-123', status: 'PROCESSED', ...mockDto };
+
+      repository.findById.mockResolvedValue({
+        id: 'pending-receipt-123',
+        status: 'PENDING',
+      } as any);
+
+      const mockReceipt = {
+        id: 'pending-receipt-123',
+        status: 'PROCESSED',
+        ...mockDto,
+      };
       repository.update.mockResolvedValue(mockReceipt as any);
-      invoicesService.generateInvoice.mockResolvedValue({ id: 'invoice-123', invoiceNumber: 'INV-123' } as any);
+      invoicesService.generateInvoice.mockResolvedValue({
+        id: 'invoice-123',
+        invoiceNumber: 'INV-123',
+      } as any);
 
       const result = await service.createReceipt(dtoWithId);
 
       expect(repository.findById).toHaveBeenCalledWith('pending-receipt-123');
-      expect(repository.update).toHaveBeenCalledWith('pending-receipt-123', dtoWithId);
-      expect(invoicesService.generateInvoice).toHaveBeenCalledWith('pending-receipt-123');
+      expect(repository.update).toHaveBeenCalledWith(
+        'pending-receipt-123',
+        dtoWithId,
+      );
+      expect(invoicesService.generateInvoice).toHaveBeenCalledWith(
+        'pending-receipt-123',
+      );
       expect(result).toEqual(mockReceipt);
     });
 
@@ -99,23 +127,37 @@ describe('ReceiptsService', () => {
       const dtoWithId = { ...mockDto, receiptId: 'missing-receipt-123' };
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.createReceipt(dtoWithId)).rejects.toThrow(NotFoundException);
+      await expect(service.createReceipt(dtoWithId)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.update).not.toHaveBeenCalled();
       expect(invoicesService.generateInvoice).not.toHaveBeenCalled();
     });
 
     it('harus tetap mengembalikan receipt meskipun proses generateInvoice otomatis mengalami kegagalan', async () => {
-      const mockUser = { id: 'user-123', phoneNumber: '+628000000000', name: 'Default User' };
+      const mockUser = {
+        id: 'user-123',
+        phoneNumber: '+628000000000',
+        name: 'Default User',
+      };
       prisma.user.findUnique.mockResolvedValue(mockUser as any);
-      
-      const mockReceipt = { id: 'receipt-123', status: 'PROCESSED', ...mockDto };
+
+      const mockReceipt = {
+        id: 'receipt-123',
+        status: 'PROCESSED',
+        ...mockDto,
+      };
       repository.create.mockResolvedValue(mockReceipt as any);
-      invoicesService.generateInvoice.mockRejectedValue(new Error('Generate invoice crash'));
+      invoicesService.generateInvoice.mockRejectedValue(
+        new Error('Generate invoice crash'),
+      );
 
       const result = await service.createReceipt(mockDto);
 
       expect(repository.create).toHaveBeenCalled();
-      expect(invoicesService.generateInvoice).toHaveBeenCalledWith('receipt-123');
+      expect(invoicesService.generateInvoice).toHaveBeenCalledWith(
+        'receipt-123',
+      );
       // Memastikan flow tidak terhenti dan data receipt tetap dikembalikan (Error Recovery)
       expect(result).toEqual(mockReceipt);
     });

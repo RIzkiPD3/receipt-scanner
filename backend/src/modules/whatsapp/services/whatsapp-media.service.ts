@@ -55,7 +55,12 @@ export class WhatsAppMediaService {
     }
 
     // 1. Ambil metadata media dari Meta Graph API
-    let metadata: { url: string; mime_type: string; file_size: number; id: string };
+    let metadata: {
+      url: string;
+      mime_type: string;
+      file_size: number;
+      id: string;
+    };
     try {
       metadata = await this.graphClient.getMediaMetadata(mediaId);
     } catch (error) {

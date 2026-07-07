@@ -43,7 +43,9 @@ export class ReceiptsService {
           `Receipt PENDING dengan ID ${dto.receiptId} tidak ditemukan untuk diupdate`,
           ReceiptsService.name,
         );
-        throw new NotFoundException(`Receipt PENDING dengan ID ${dto.receiptId} tidak ditemukan.`);
+        throw new NotFoundException(
+          `Receipt PENDING dengan ID ${dto.receiptId} tidak ditemukan.`,
+        );
       }
 
       this.logger.log(

@@ -19,7 +19,11 @@ export interface StorageProvider {
    * @param mimeType MIME type file (misal: "image/jpeg")
    * @returns Path lokal atau URL lengkap dari file yang disimpan
    */
-  upload(fileBuffer: Buffer, filename: string, mimeType: string): Promise<string>;
+  upload(
+    fileBuffer: Buffer,
+    filename: string,
+    mimeType: string,
+  ): Promise<string>;
 
   /**
    * Menghapus file dari media penyimpanan.

@@ -54,7 +54,10 @@ export class PdfRequestHandler {
    * @param invoiceId ID unik invoice (UUID)
    * @param pdfPath   Path lokal file PDF yang telah disimpan
    */
-  private async persistPdfUrl(invoiceId: string, pdfPath: string): Promise<void> {
+  private async persistPdfUrl(
+    invoiceId: string,
+    pdfPath: string,
+  ): Promise<void> {
     try {
       await this.prisma.invoice.update({
         where: { id: invoiceId },
@@ -88,11 +91,17 @@ export class PdfRequestHandler {
 
     const invoiceNumber = buttonId.substring(this.PDF_REQUEST_PREFIX.length);
     if (!invoiceNumber) {
-      this.logger.warn(`Nomor invoice kosong dari ID tombol: ${buttonId}`, PdfRequestHandler.name);
+      this.logger.warn(
+        `Nomor invoice kosong dari ID tombol: ${buttonId}`,
+        PdfRequestHandler.name,
+      );
       return;
     }
 
-    this.logger.log(`[1/5] Mencari invoice ${invoiceNumber} di database...`, PdfRequestHandler.name);
+    this.logger.log(
+      `[1/5] Mencari invoice ${invoiceNumber} di database...`,
+      PdfRequestHandler.name,
+    );
 
     try {
       const invoice = await this.prisma.invoice.findUnique({

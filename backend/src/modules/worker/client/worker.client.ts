@@ -84,8 +84,7 @@ export class WorkerClient {
           throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
-        const data =
-          (await response.json()) as WorkerProcessReceiptResponse;
+        const data = (await response.json()) as WorkerProcessReceiptResponse;
 
         this.logger.log(
           `Respon dari Golang Worker — status: ${data.status}, message: ${data.message}`,
@@ -97,8 +96,7 @@ export class WorkerClient {
         clearTimeout(timeoutHandle);
         lastError = error as Error;
 
-        const isAborted =
-          error instanceof Error && error.name === 'AbortError';
+        const isAborted = error instanceof Error && error.name === 'AbortError';
         const label = isAborted ? 'TIMEOUT' : 'ERROR';
 
         this.logger.warn(

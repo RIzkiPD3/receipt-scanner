@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InvoicesRepository } from '../repositories/invoices.repository';
 import { WhatsAppNotificationService } from '../../whatsapp/services/whatsapp-notification.service';
 
@@ -19,7 +24,8 @@ export class InvoicesService {
     const dd = String(now.getDate()).padStart(2, '0');
     const dateStr = `${yyyy}${mm}${dd}`;
 
-    const lastInvoice = await this.repository.findLastInvoiceNumberForToday(dateStr);
+    const lastInvoice =
+      await this.repository.findLastInvoiceNumberForToday(dateStr);
     let nextSeq = 1;
 
     if (lastInvoice) {
@@ -38,20 +44,29 @@ export class InvoicesService {
 
   // Membuat Invoice baru dari Receipt
   async generateInvoice(receiptId: string) {
-    this.logger.log(`Memulai proses pembuatan invoice untuk receiptId: ${receiptId}`);
+    this.logger.log(
+      `Memulai proses pembuatan invoice untuk receiptId: ${receiptId}`,
+    );
 
     // 1. Cari Receipt dan pastikan ada
     const receipt = await this.repository.findReceiptWithItems(receiptId);
     if (!receipt) {
       this.logger.error(`Receipt dengan ID ${receiptId} tidak ditemukan`);
-      throw new NotFoundException(`Receipt dengan ID ${receiptId} tidak ditemukan`);
+      throw new NotFoundException(
+        `Receipt dengan ID ${receiptId} tidak ditemukan`,
+      );
     }
 
     // 2. Cegah duplikasi Invoice untuk satu Receipt yang sama
-    const existingInvoice = await this.repository.findInvoiceByReceiptId(receiptId);
+    const existingInvoice =
+      await this.repository.findInvoiceByReceiptId(receiptId);
     if (existingInvoice) {
-      this.logger.warn(`Invoice untuk receiptId ${receiptId} sudah pernah dibuat`);
-      throw new BadRequestException(`Invoice untuk receiptId ${receiptId} sudah pernah dibuat`);
+      this.logger.warn(
+        `Invoice untuk receiptId ${receiptId} sudah pernah dibuat`,
+      );
+      throw new BadRequestException(
+        `Invoice untuk receiptId ${receiptId} sudah pernah dibuat`,
+      );
     }
 
     // 3. Loop percobaan ulang jika terjadi bentrokan nomor invoice (Unique Constraint) secara konkruen
@@ -61,7 +76,7 @@ export class InvoicesService {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       const invoiceNumber = await this.generateInvoiceNumber();
       this.logger.log(
-        `Mencoba menyimpan invoice baru dengan nomor: ${invoiceNumber} (Percobaan ${attempt}/${maxRetries})`
+        `Mencoba menyimpan invoice baru dengan nomor: ${invoiceNumber} (Percobaan ${attempt}/${maxRetries})`,
       );
 
       try {
@@ -84,11 +99,18 @@ export class InvoicesService {
           totalPrice: item.totalPrice,
         }));
 
-        const createdInvoice = await this.repository.createInvoice(invoiceData, itemsData);
-        this.logger.log(`Invoice berhasil disimpan. Nomor: ${invoiceNumber}, ID: ${createdInvoice.id}`);
+        const createdInvoice = await this.repository.createInvoice(
+          invoiceData,
+          itemsData,
+        );
+        this.logger.log(
+          `Invoice berhasil disimpan. Nomor: ${invoiceNumber}, ID: ${createdInvoice.id}`,
+        );
 
         // 4. Kirim notifikasi WhatsApp ke pengguna (fire-and-forget, tidak membatalkan invoice)
-        const phoneNumber = await this.repository.findUserPhoneNumber(receipt.userId);
+        const phoneNumber = await this.repository.findUserPhoneNumber(
+          receipt.userId,
+        );
         if (phoneNumber) {
           // Jalankan secara async tanpa await agar tidak memblokir response
           this.whatsappNotification
@@ -101,7 +123,7 @@ export class InvoicesService {
             );
         } else {
           this.logger.warn(
-            `Nomor telepon untuk userId ${receipt.userId} tidak ditemukan. Notifikasi dilewati.`
+            `Nomor telepon untuk userId ${receipt.userId} tidak ditemukan. Notifikasi dilewati.`,
           );
         }
 
@@ -109,18 +131,28 @@ export class InvoicesService {
       } catch (err: any) {
         lastError = err;
         // P2002: unique constraint violation di Prisma
-        if (err.code === 'P2002' && (err.meta?.target?.includes('invoice_number') || err.message?.includes('invoice_number'))) {
-          this.logger.warn(`Bentrokan nomor invoice terdeteksi, melakukan retry...`);
-          await new Promise((resolve) => setTimeout(resolve, Math.random() * 50));
+        if (
+          err.code === 'P2002' &&
+          (err.meta?.target?.includes('invoice_number') ||
+            err.message?.includes('invoice_number'))
+        ) {
+          this.logger.warn(
+            `Bentrokan nomor invoice terdeteksi, melakukan retry...`,
+          );
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.random() * 50),
+          );
           continue;
         }
         throw err;
       }
     }
 
-    this.logger.error(`Gagal membuat invoice setelah ${maxRetries} percobaan karena bentrokan nomor sekuensial`);
+    this.logger.error(
+      `Gagal membuat invoice setelah ${maxRetries} percobaan karena bentrokan nomor sekuensial`,
+    );
     throw new BadRequestException(
-      `Gagal menghasilkan nomor invoice yang unik setelah beberapa kali percobaan. Silakan coba kembali.`
+      `Gagal menghasilkan nomor invoice yang unik setelah beberapa kali percobaan. Silakan coba kembali.`,
     );
   }
 }

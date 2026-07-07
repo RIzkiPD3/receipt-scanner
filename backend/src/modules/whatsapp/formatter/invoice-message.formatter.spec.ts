@@ -85,7 +85,14 @@ describe('InvoiceMessageFormatter', () => {
     });
 
     it('harus menampilkan jumlah 0 dengan dua desimal', () => {
-      const invoice = { ...baseInvoice, subtotal: 0, taxAmount: 0, discountAmount: 0, totalAmount: 0, items: [] };
+      const invoice = {
+        ...baseInvoice,
+        subtotal: 0,
+        taxAmount: 0,
+        discountAmount: 0,
+        totalAmount: 0,
+        items: [],
+      };
       const result = formatter.format(invoice);
       expect(result).toContain('0.00');
     });
@@ -102,7 +109,10 @@ describe('InvoiceMessageFormatter', () => {
     });
 
     it('harus menerima objek Date maupun string ISO', () => {
-      const invoiceWithStringDate = { ...baseInvoice, issueDate: '2026-07-04T00:00:00.000Z' as any };
+      const invoiceWithStringDate = {
+        ...baseInvoice,
+        issueDate: '2026-07-04T00:00:00.000Z' as any,
+      };
       expect(() => formatter.format(invoiceWithStringDate)).not.toThrow();
     });
   });
@@ -206,7 +216,11 @@ describe('InvoiceMessageFormatter', () => {
     });
 
     it('harus menangani angka desimal (Prisma Decimal) yang dipasskan sebagai number', () => {
-      const invoice = { ...baseInvoice, totalAmount: 125750.5, subtotal: 125750.5 };
+      const invoice = {
+        ...baseInvoice,
+        totalAmount: 125750.5,
+        subtotal: 125750.5,
+      };
       const result = formatter.format(invoice);
       expect(result).toContain('125,750.50');
     });

@@ -1,4 +1,8 @@
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 // =============================================================================
@@ -47,7 +51,10 @@ export class WhatsAppGraphClient {
    */
   async getMediaMetadata(mediaId: string): Promise<MetaMediaMetadata> {
     const url = `https://graph.facebook.com/${this.graphApiVersion}/${mediaId}`;
-    this.logger.log(`Mengambil metadata media dari Graph API: ${url}`, WhatsAppGraphClient.name);
+    this.logger.log(
+      `Mengambil metadata media dari Graph API: ${url}`,
+      WhatsAppGraphClient.name,
+    );
 
     try {
       const response = await fetch(url, {
@@ -66,7 +73,7 @@ export class WhatsAppGraphClient {
         );
       }
 
-      const data = await response.json() as MetaMediaMetadata;
+      const data = (await response.json()) as MetaMediaMetadata;
       this.logger.debug(
         `Metadata diterima: URL=${data.url}, MIME=${data.mime_type}, Size=${data.file_size}`,
         WhatsAppGraphClient.name,
@@ -91,7 +98,10 @@ export class WhatsAppGraphClient {
    * @param downloadUrl URL unduhan sementara dari getMediaMetadata
    */
   async downloadMediaStream(downloadUrl: string): Promise<ArrayBuffer> {
-    this.logger.log(`Mengunduh file biner media dari: ${downloadUrl}`, WhatsAppGraphClient.name);
+    this.logger.log(
+      `Mengunduh file biner media dari: ${downloadUrl}`,
+      WhatsAppGraphClient.name,
+    );
 
     try {
       const response = await fetch(downloadUrl, {
@@ -130,7 +140,9 @@ export class WhatsAppGraphClient {
    * @param text Isi pesan teks yang akan dikirim
    */
   async sendTextMessage(to: string, text: string): Promise<void> {
-    const phoneNumberId = this.configService.get<string>('WHATSAPP_PHONE_NUMBER_ID');
+    const phoneNumberId = this.configService.get<string>(
+      'WHATSAPP_PHONE_NUMBER_ID',
+    );
     const url = `https://graph.facebook.com/${this.graphApiVersion}/${phoneNumberId}/messages`;
 
     this.logger.log(
@@ -196,7 +208,9 @@ export class WhatsAppGraphClient {
     bodyText: string,
     buttons: Array<{ id: string; title: string }>,
   ): Promise<void> {
-    const phoneNumberId = this.configService.get<string>('WHATSAPP_PHONE_NUMBER_ID');
+    const phoneNumberId = this.configService.get<string>(
+      'WHATSAPP_PHONE_NUMBER_ID',
+    );
     const url = `https://graph.facebook.com/${this.graphApiVersion}/${phoneNumberId}/messages`;
 
     this.logger.log(
@@ -279,7 +293,9 @@ export class WhatsAppGraphClient {
     filename: string,
     mimeType: string,
   ): Promise<string> {
-    const phoneNumberId = this.configService.get<string>('WHATSAPP_PHONE_NUMBER_ID');
+    const phoneNumberId = this.configService.get<string>(
+      'WHATSAPP_PHONE_NUMBER_ID',
+    );
     const url = `https://graph.facebook.com/${this.graphApiVersion}/${phoneNumberId}/media`;
 
     this.logger.log(
@@ -290,7 +306,7 @@ export class WhatsAppGraphClient {
     const formData = new FormData();
     formData.append('messaging_product', 'whatsapp');
     formData.append('type', mimeType);
-    
+
     // Ekstrak ArrayBuffer murni dari Buffer Node.js untuk kompatibilitas Blob.
     // Buffer.buffer bertipe ArrayBufferLike (mencakup SharedArrayBuffer) yang
     // tidak kompatibel dengan BlobPart yang membutuhkan ArrayBuffer murni.
@@ -354,7 +370,9 @@ export class WhatsAppGraphClient {
     filename: string,
     caption?: string,
   ): Promise<void> {
-    const phoneNumberId = this.configService.get<string>('WHATSAPP_PHONE_NUMBER_ID');
+    const phoneNumberId = this.configService.get<string>(
+      'WHATSAPP_PHONE_NUMBER_ID',
+    );
     const url = `https://graph.facebook.com/${this.graphApiVersion}/${phoneNumberId}/messages`;
 
     this.logger.log(

@@ -100,7 +100,9 @@ describe('PdfService', () => {
 
       expect(puppeteerMock.launch).toHaveBeenCalled();
       expect(mockBrowser.newPage).toHaveBeenCalled();
-      expect(mockPage.setContent).toHaveBeenCalledWith(mockHtml, { waitUntil: 'load' });
+      expect(mockPage.setContent).toHaveBeenCalledWith(mockHtml, {
+        waitUntil: 'load',
+      });
       expect(mockPage.pdf).toHaveBeenCalledWith(
         expect.objectContaining({
           format: 'A4',

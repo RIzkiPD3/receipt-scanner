@@ -32,7 +32,9 @@ export class ReceiptsRepository {
           userId: userId,
           imageUrl: data.imageUrl ?? 'http://placeholder.com/receipt.jpg',
           merchantName: data.storeName,
-          transactionDate: data.transactionDate ? new Date(data.transactionDate) : null,
+          transactionDate: data.transactionDate
+            ? new Date(data.transactionDate)
+            : null,
           subtotal: data.subtotal,
           tax: data.tax,
           totalAmount: data.total,
@@ -71,7 +73,9 @@ export class ReceiptsRepository {
         where: { id: receiptId },
         data: {
           merchantName: data.storeName,
-          transactionDate: data.transactionDate ? new Date(data.transactionDate) : null,
+          transactionDate: data.transactionDate
+            ? new Date(data.transactionDate)
+            : null,
           subtotal: data.subtotal,
           tax: data.tax,
           totalAmount: data.total,

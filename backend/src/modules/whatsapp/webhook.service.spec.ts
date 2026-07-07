@@ -84,7 +84,11 @@ describe('WebhookService', () => {
 
   describe('verifyWebhook()', () => {
     it('harus mengembalikan challenge jika verify_token sesuai', () => {
-      const result = service.verifyWebhook('subscribe', 'secure_token', 'rand_challenge_123');
+      const result = service.verifyWebhook(
+        'subscribe',
+        'secure_token',
+        'rand_challenge_123',
+      );
       expect(result).toBe('rand_challenge_123');
     });
 
@@ -118,11 +122,16 @@ describe('WebhookService', () => {
       pdfRequestHandler.isPdfRequest.mockReturnValue(true);
       pdfRequestHandler.handle.mockResolvedValue(undefined);
 
-      service.handleWebhookEvent(basePayload as any);
+      service.handleWebhookEvent(basePayload);
 
       expect(parser.parse).toHaveBeenCalledWith(basePayload);
-      expect(pdfRequestHandler.isPdfRequest).toHaveBeenCalledWith('pdf_req:INV-123');
-      expect(pdfRequestHandler.handle).toHaveBeenCalledWith('628123456789', 'pdf_req:INV-123');
+      expect(pdfRequestHandler.isPdfRequest).toHaveBeenCalledWith(
+        'pdf_req:INV-123',
+      );
+      expect(pdfRequestHandler.handle).toHaveBeenCalledWith(
+        '628123456789',
+        'pdf_req:INV-123',
+      );
     });
 
     it('harus mengunduh gambar struk, menyimpan ke DB, dan memanggil worker secara asinkron jika bertipe image', async () => {
@@ -135,16 +144,25 @@ describe('WebhookService', () => {
       parser.parse.mockReturnValue([mockMessage as any]);
 
       prisma.user.findUnique.mockResolvedValue({ id: 'user-id-123' } as any);
-      mediaService.downloadMedia.mockResolvedValue({ filename: 'media-abc-123.jpg' } as any);
-      prisma.receipt.create.mockResolvedValue({ id: 'receipt-uuid-abc' } as any);
-      workerClient.sendToWorker.mockResolvedValue({ status: 'success', message: 'started' });
+      mediaService.downloadMedia.mockResolvedValue({
+        filename: 'media-abc-123.jpg',
+      } as any);
+      prisma.receipt.create.mockResolvedValue({
+        id: 'receipt-uuid-abc',
+      } as any);
+      workerClient.sendToWorker.mockResolvedValue({
+        status: 'success',
+        message: 'started',
+      });
 
-      service.handleWebhookEvent(basePayload as any);
+      service.handleWebhookEvent(basePayload);
 
       // Webhook handler bersifat async/background untuk pengolahan gambar, jadi kita tunggu scheduler mikro
       await new Promise((resolve) => process.nextTick(resolve));
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { phoneNumber: '628123456789' } });
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { phoneNumber: '628123456789' },
+      });
       expect(mediaService.downloadMedia).toHaveBeenCalledWith('media-abc-123');
       expect(prisma.receipt.create).toHaveBeenCalledWith({
         data: {
@@ -155,7 +173,10 @@ describe('WebhookService', () => {
           status: 'PENDING',
         },
       });
-      expect(workerClient.sendToWorker).toHaveBeenCalledWith('receipt-uuid-abc', 'http://test-server/uploads/media-abc-123.jpg');
+      expect(workerClient.sendToWorker).toHaveBeenCalledWith(
+        'receipt-uuid-abc',
+        'http://test-server/uploads/media-abc-123.jpg',
+      );
     });
   });
 });

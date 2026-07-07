@@ -1,4 +1,8 @@
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InvoiceTemplateHelper } from '../helpers/invoice-template.helper';
 import * as puppeteer from 'puppeteer';
 import * as fs from 'fs';
@@ -24,9 +28,14 @@ export class PdfService {
    * @param invoice Entitas Invoice dari database
    * @returns Objek berisi pdfPath dan pdfBuffer
    */
-  async generateInvoicePdf(invoice: any): Promise<{ pdfPath: string; pdfBuffer: Buffer }> {
-    this.logger.log(`Memulai proses pembuatan berkas PDF untuk invoice: ${invoice.invoiceNumber}`, PdfService.name);
-    
+  async generateInvoicePdf(
+    invoice: any,
+  ): Promise<{ pdfPath: string; pdfBuffer: Buffer }> {
+    this.logger.log(
+      `Memulai proses pembuatan berkas PDF untuk invoice: ${invoice.invoiceNumber}`,
+      PdfService.name,
+    );
+
     // 1. Render data invoice ke template HTML
     let html: string;
     try {
@@ -37,20 +46,29 @@ export class PdfService {
         err instanceof Error ? err.stack : String(err),
         PdfService.name,
       );
-      throw new InternalServerErrorException(`Gagal me-render template invoice HTML: ${err.message}`);
+      throw new InternalServerErrorException(
+        `Gagal me-render template invoice HTML: ${err.message}`,
+      );
     }
 
     // 2. Gunakan Puppeteer untuk membuat PDF
     let browser: puppeteer.Browser | null = null;
     try {
-      this.logger.log(`Menjalankan instance Puppeteer headless...`, PdfService.name);
+      this.logger.log(
+        `Menjalankan instance Puppeteer headless...`,
+        PdfService.name,
+      );
 
       // Di dalam Docker/Alpine, Chromium disediakan oleh sistem (via apk).
       // PUPPETEER_EXECUTABLE_PATH menunjuk ke binary tersebut.
       // Di luar Docker (local dev), biarkan Puppeteer menggunakan Chrome bawaan.
-      const executablePath = process.env['PUPPETEER_EXECUTABLE_PATH'] || undefined;
+      const executablePath =
+        process.env['PUPPETEER_EXECUTABLE_PATH'] || undefined;
       if (executablePath) {
-        this.logger.log(`Menggunakan Chromium dari: ${executablePath}`, PdfService.name);
+        this.logger.log(
+          `Menggunakan Chromium dari: ${executablePath}`,
+          PdfService.name,
+        );
       }
 
       browser = await puppeteer.launch({
@@ -65,11 +83,17 @@ export class PdfService {
       });
 
       const page = await browser.newPage();
-      
-      this.logger.log(`Memasukkan konten HTML ke Puppeteer page...`, PdfService.name);
+
+      this.logger.log(
+        `Memasukkan konten HTML ke Puppeteer page...`,
+        PdfService.name,
+      );
       await page.setContent(html, { waitUntil: 'load' });
 
-      this.logger.log(`Men-generate buffer PDF (A4, margin 20mm)...`, PdfService.name);
+      this.logger.log(
+        `Men-generate buffer PDF (A4, margin 20mm)...`,
+        PdfService.name,
+      );
       const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
@@ -84,7 +108,10 @@ export class PdfService {
       // 3. Simpan file ke direktori storage/pdf
       const storageDir = path.join(process.cwd(), 'storage/pdf');
       if (!fs.existsSync(storageDir)) {
-        this.logger.log(`Membuat direktori penyimpanan PDF: ${storageDir}`, PdfService.name);
+        this.logger.log(
+          `Membuat direktori penyimpanan PDF: ${storageDir}`,
+          PdfService.name,
+        );
         await fs.promises.mkdir(storageDir, { recursive: true });
       }
 
@@ -107,7 +134,9 @@ export class PdfService {
         error instanceof Error ? error.stack : String(error),
         PdfService.name,
       );
-      throw new InternalServerErrorException(`Gagal memproses pembuatan berkas PDF: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Gagal memproses pembuatan berkas PDF: ${error.message}`,
+      );
     } finally {
       if (browser) {
         this.logger.log(`Menutup browser Puppeteer...`, PdfService.name);

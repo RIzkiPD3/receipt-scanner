@@ -46,13 +46,12 @@ export class WebhookService {
         `Webhook verification FAILED — token mismatch or invalid mode`,
         WebhookService.name,
       );
-      throw new ForbiddenException('Webhook verification failed: invalid token or mode.');
+      throw new ForbiddenException(
+        'Webhook verification failed: invalid token or mode.',
+      );
     }
 
-    this.logger.log(
-      'Webhook verified successfully ✅',
-      WebhookService.name,
-    );
+    this.logger.log('Webhook verified successfully ✅', WebhookService.name);
 
     return challenge;
   }
@@ -82,7 +81,11 @@ export class WebhookService {
           `Webhook received: gambar struk dari ${msg.from} (MediaID: ${msg.mediaId})`,
           WebhookService.name,
         );
-        this.processReceiptImageBackground(msg.from, msg.mediaId, msg.messageId).catch((err) =>
+        this.processReceiptImageBackground(
+          msg.from,
+          msg.mediaId,
+          msg.messageId,
+        ).catch((err) =>
           this.logger.error(
             `Background Receipt Image handler gagal untuk ${msg.from}`,
             err instanceof Error ? err.stack : String(err),
@@ -138,15 +141,25 @@ export class WebhookService {
   /**
    * Mengunduh gambar struk, menyimpannya di DB (PENDING), lalu memicu Go worker secara asinkron.
    */
-  private async processReceiptImageBackground(from: string, mediaId: string, messageId: string) {
-    this.logger.log(`[OCR Pipeline] Menerima gambar struk dari ${from}. Memulai pengolahan...`, WebhookService.name);
+  private async processReceiptImageBackground(
+    from: string,
+    mediaId: string,
+    messageId: string,
+  ) {
+    this.logger.log(
+      `[OCR Pipeline] Menerima gambar struk dari ${from}. Memulai pengolahan...`,
+      WebhookService.name,
+    );
 
     // 1. Dapatkan atau buat User di DB
     let user = await this.prisma.user.findUnique({
       where: { phoneNumber: from },
     });
     if (!user) {
-      this.logger.log(`Membuat user baru untuk nomor telepon ${from}...`, WebhookService.name);
+      this.logger.log(
+        `Membuat user baru untuk nomor telepon ${from}...`,
+        WebhookService.name,
+      );
       user = await this.prisma.user.create({
         data: {
           phoneNumber: from,
@@ -163,10 +176,14 @@ export class WebhookService {
       `[Performance] Media Download took ${downloadDuration}ms untuk mediaId: ${mediaId}`,
       WebhookService.name,
     );
-    this.logger.log(`Media downloaded: ${downloadedFile.filename}`, WebhookService.name);
+    this.logger.log(
+      `Media downloaded: ${downloadedFile.filename}`,
+      WebhookService.name,
+    );
 
     // 3. Bangun URL publik gambar
-    const appUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3000';
+    const appUrl =
+      this.configService.get<string>('APP_URL') || 'http://localhost:3000';
     const imageUrl = `${appUrl}/uploads/${downloadedFile.filename}`;
 
     // 4. Simpan Receipt awal berstatus PENDING di database
@@ -185,15 +202,19 @@ export class WebhookService {
       `[Performance] Database Save took ${dbSaveDuration}ms untuk receiptId: ${receipt.id}`,
       WebhookService.name,
     );
-    this.logger.log(`Receipt saved (PENDING) ID: ${receipt.id}`, WebhookService.name);
+    this.logger.log(
+      `Receipt saved (PENDING) ID: ${receipt.id}`,
+      WebhookService.name,
+    );
 
     // 5. Hubungi Go Worker secara asinkron (fire-and-forget)
     this.logger.log(
       `[OCR Pipeline] Mengirim receiptId ${receipt.id} ke Golang Worker secara asinkron...`,
       WebhookService.name,
     );
-    
-    this.workerClient.sendToWorker(receipt.id, imageUrl)
+
+    this.workerClient
+      .sendToWorker(receipt.id, imageUrl)
       .then((res) => {
         this.logger.log(
           `[OCR Pipeline] Golang Worker sukses memproses receiptId ${receipt.id}: status=${res.status}, message=${res.message}`,

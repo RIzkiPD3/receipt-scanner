@@ -99,9 +99,7 @@ export class WebhookController {
   // ---------------------------------------------------------------------------
   @Post()
   @HttpCode(HttpStatus.OK)
-  receiveWebhook(
-    @Body() payload: WhatsAppWebhookPayload,
-  ): { status: string } {
+  receiveWebhook(@Body() payload: WhatsAppWebhookPayload): { status: string } {
     this.logger.log(
       `POST /webhook event received — object: ${payload?.object ?? 'unknown'}`,
       WebhookController.name,

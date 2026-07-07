@@ -1,17 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { InvoiceResponseDto, InvoiceItemResponseDto } from '../dto/invoice-response.dto';
+import {
+  InvoiceResponseDto,
+  InvoiceItemResponseDto,
+} from '../dto/invoice-response.dto';
 
 @Injectable()
 export class InvoicesMapper {
   // Mengonversi data entitas Invoice dari database (dengan Decimal) menjadi DTO respons aman
   toResponseDto(invoice: any): InvoiceResponseDto {
-    const itemsDto: InvoiceItemResponseDto[] = (invoice.items ?? []).map((item: any) => ({
-      id: item.id,
-      name: item.name,
-      quantity: Number(item.quantity),
-      unitPrice: Number(item.unitPrice),
-      totalPrice: Number(item.totalPrice),
-    }));
+    const itemsDto: InvoiceItemResponseDto[] = (invoice.items ?? []).map(
+      (item: any) => ({
+        id: item.id,
+        name: item.name,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+        totalPrice: Number(item.totalPrice),
+      }),
+    );
 
     return {
       id: invoice.id,

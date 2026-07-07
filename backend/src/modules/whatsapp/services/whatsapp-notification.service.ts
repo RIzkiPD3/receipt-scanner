@@ -27,7 +27,11 @@ export class WhatsAppNotificationService {
    * @param invoice     Entitas invoice lengkap dari database
    * @param receiptCreatedAt Waktu ketika gambar struk pertama kali diterima (opsional)
    */
-  async sendInvoiceSummary(phoneNumber: string, invoice: any, receiptCreatedAt?: Date): Promise<void> {
+  async sendInvoiceSummary(
+    phoneNumber: string,
+    invoice: any,
+    receiptCreatedAt?: Date,
+  ): Promise<void> {
     this.logger.log(
       `Memulai pengiriman notifikasi invoice ${invoice.invoiceNumber} ke ${phoneNumber}`,
       WhatsAppNotificationService.name,
@@ -43,7 +47,10 @@ export class WhatsAppNotificationService {
 
     let message: string;
     try {
-      this.logger.log(`Memformat pesan invoice...`, WhatsAppNotificationService.name);
+      this.logger.log(
+        `Memformat pesan invoice...`,
+        WhatsAppNotificationService.name,
+      );
       message = this.formatter.format(invoice);
       this.logger.log(
         `Pesan berhasil diformat (${message.length} karakter).`,
@@ -71,7 +78,11 @@ export class WhatsAppNotificationService {
       ];
 
       const sendStart = Date.now();
-      await this.graphClient.sendInteractiveButtonMessage(phoneNumber, message, buttons);
+      await this.graphClient.sendInteractiveButtonMessage(
+        phoneNumber,
+        message,
+        buttons,
+      );
       const sendDuration = Date.now() - sendStart;
 
       this.logger.log(
@@ -85,7 +96,8 @@ export class WhatsAppNotificationService {
 
       // Hitung dan log durasi total pipeline dari terima gambar struk hingga pesan notifikasi terkirim
       if (receiptCreatedAt) {
-        const totalPipelineDuration = Date.now() - new Date(receiptCreatedAt).getTime();
+        const totalPipelineDuration =
+          Date.now() - new Date(receiptCreatedAt).getTime();
         this.logger.log(
           `[Performance] Total Pipeline took ${totalPipelineDuration}ms (terima gambar -> invoice dikirim ke WhatsApp)`,
           WhatsAppNotificationService.name,
@@ -114,7 +126,10 @@ export class WhatsAppNotificationService {
     let pdfBuffer: Buffer;
     let pdfPath: string;
     try {
-      this.logger.log(`Men-generate berkas PDF via PdfService...`, WhatsAppNotificationService.name);
+      this.logger.log(
+        `Men-generate berkas PDF via PdfService...`,
+        WhatsAppNotificationService.name,
+      );
 
       const pdfStart = Date.now();
       const result = await this.pdfService.generateInvoicePdf(invoice);
@@ -126,7 +141,10 @@ export class WhatsAppNotificationService {
         `[Performance] PDF Generation took ${pdfDuration}ms untuk invoice: ${invoice.invoiceNumber}`,
         WhatsAppNotificationService.name,
       );
-      this.logger.log(`PDF berhasil disimpan di: ${pdfPath}`, WhatsAppNotificationService.name);
+      this.logger.log(
+        `PDF berhasil disimpan di: ${pdfPath}`,
+        WhatsAppNotificationService.name,
+      );
     } catch (genErr: any) {
       this.logger.error(
         `Gagal men-generate PDF untuk invoice ${invoice.invoiceNumber}`,
@@ -139,7 +157,11 @@ export class WhatsAppNotificationService {
           `⚠️ Maaf, terjadi kesalahan saat membuat berkas PDF untuk invoice *${invoice.invoiceNumber}*. Silakan coba lagi nanti.`,
         );
       } catch (sendErr) {
-        this.logger.error(`Gagal mengirim notifikasi error ke user`, sendErr, WhatsAppNotificationService.name);
+        this.logger.error(
+          `Gagal mengirim notifikasi error ke user`,
+          sendErr,
+          WhatsAppNotificationService.name,
+        );
       }
       return;
     }
@@ -148,9 +170,19 @@ export class WhatsAppNotificationService {
     let mediaId: string;
     const filename = `${invoice.invoiceNumber}.pdf`;
     try {
-      this.logger.log(`Mengunggah berkas PDF ke Meta Graph API...`, WhatsAppNotificationService.name);
-      mediaId = await this.graphClient.uploadMedia(pdfBuffer, filename, 'application/pdf');
-      this.logger.log(`Media berhasil diunggah. Media ID: ${mediaId}`, WhatsAppNotificationService.name);
+      this.logger.log(
+        `Mengunggah berkas PDF ke Meta Graph API...`,
+        WhatsAppNotificationService.name,
+      );
+      mediaId = await this.graphClient.uploadMedia(
+        pdfBuffer,
+        filename,
+        'application/pdf',
+      );
+      this.logger.log(
+        `Media berhasil diunggah. Media ID: ${mediaId}`,
+        WhatsAppNotificationService.name,
+      );
     } catch (uploadErr: any) {
       this.logger.error(
         `Gagal mengunggah PDF invoice ${invoice.invoiceNumber} ke WhatsApp Cloud API`,
@@ -163,14 +195,21 @@ export class WhatsAppNotificationService {
           `⚠️ Maaf, gagal memproses berkas PDF invoice *${invoice.invoiceNumber}* untuk dikirim ke WhatsApp.`,
         );
       } catch (sendErr) {
-        this.logger.error(`Gagal mengirim notifikasi error ke user`, sendErr, WhatsAppNotificationService.name);
+        this.logger.error(
+          `Gagal mengirim notifikasi error ke user`,
+          sendErr,
+          WhatsAppNotificationService.name,
+        );
       }
       return;
     }
 
     // 3. Kirim dokumen PDF
     try {
-      this.logger.log(`Mengirim dokumen PDF ke ${phoneNumber}...`, WhatsAppNotificationService.name);
+      this.logger.log(
+        `Mengirim dokumen PDF ke ${phoneNumber}...`,
+        WhatsAppNotificationService.name,
+      );
 
       const sendDocStart = Date.now();
       await this.graphClient.sendDocumentMessage(
