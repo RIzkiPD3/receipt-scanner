@@ -35,7 +35,7 @@ func TestBackendClient_SaveReceipt_Success(t *testing.T) {
 		},
 	}
 
-	err := client.SaveReceipt(context.Background(), receipt, "http://image.url")
+	err := client.SaveReceipt(context.Background(), receipt, "http://image.url", "receipt-id-123")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestBackendClient_SaveReceipt_ClientError(t *testing.T) {
 		StoreName: "",
 	}
 
-	err := client.SaveReceipt(context.Background(), receipt, "")
+	err := client.SaveReceipt(context.Background(), receipt, "", "")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -85,7 +85,7 @@ func TestBackendClient_SaveReceipt_Retries(t *testing.T) {
 		StoreName: "Store",
 	}
 
-	err := client.SaveReceipt(context.Background(), receipt, "")
+	err := client.SaveReceipt(context.Background(), receipt, "", "")
 	if err != nil {
 		t.Fatalf("expected success after retries, got: %v", err)
 	}

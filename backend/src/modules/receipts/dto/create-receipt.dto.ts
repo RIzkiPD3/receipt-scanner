@@ -62,4 +62,9 @@ export class CreateReceiptDto {
   @IsString()
   @IsOptional()
   userId?: string;
+
+  @IsString()
+  @IsOptional()
+  receiptId?: string;
 }
+

@@ -139,3 +139,13 @@ func (p *TesseractProvider) parseTSV(tsvContent string) (string, float64, error)
 
 	return reconstructedText, averageConf, nil
 }
+
+// Ping mengecek apakah binary Tesseract terinstall dan dapat dijalankan
+func (p *TesseractProvider) Ping(ctx context.Context) error {
+	cmd := exec.CommandContext(ctx, p.binaryPath, "--version")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("tesseract binary not reachable: %w", err)
+	}
+	return nil
+}
+

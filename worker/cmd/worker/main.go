@@ -64,7 +64,7 @@ func main() {
 	processingSvc := processing.NewProcessingService(ocrSvc, llmProv, logger)
 
 	// 7. Inisialisasi handler dengan dependency injection
-	healthHandler := handler.NewHealthHandler(logger)
+	healthHandler := handler.NewHealthHandler(tesseractProvider, llmProv, logger)
 	receiptHandler := handler.NewReceiptHandler(processingSvc, backendClient, logger)
 
 	// 8. Daftarkan routes ke ServeMux

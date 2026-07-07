@@ -6,17 +6,8 @@ import { PdfService } from '../../pdf/services/pdf.service';
 // =============================================================================
 // WhatsAppNotificationService
 // =============================================================================
-// Bertanggung jawab mengorkestrasi pengiriman notifikasi WhatsApp setelah
-// Invoice berhasil dibuat. Service ini memisahkan:
-//
-//   - InvoiceMessageFormatter → memformat pesan teks
-//   - WhatsAppGraphClient    → mengirim pesan via Meta Graph API
-//   - PdfService             → memproses konversi ke berkas PDF
-//
-// Error handling yang diterapkan:
-//   - Kegagalan pengiriman WhatsApp TIDAK mem-rollback invoice yang sudah dibuat.
-//   - Error selalu di-log, dan exception di-suppress agar tidak mempengaruhi
-//     response HTTP yang sudah dikembalikan ke caller (InvoicesService).
+// Mengirim notifikasi WhatsApp terkait Invoice ke pengguna.
+// Mengukur performa pengiriman pesan dan dokumen PDF secara terstruktur.
 // =============================================================================
 
 @Injectable()
@@ -32,17 +23,16 @@ export class WhatsAppNotificationService {
   /**
    * Mengirim ringkasan invoice berupa tombol interaktif ke nomor WhatsApp pengguna.
    *
-   * @param phoneNumber Nomor telepon dalam format internasional tanpa +
-   *                    Contoh: "628123456789"
+   * @param phoneNumber Nomor telepon penerima (format internasional tanpa +)
    * @param invoice     Entitas invoice lengkap dari database
+   * @param receiptCreatedAt Waktu ketika gambar struk pertama kali diterima (opsional)
    */
-  async sendInvoiceSummary(phoneNumber: string, invoice: any): Promise<void> {
+  async sendInvoiceSummary(phoneNumber: string, invoice: any, receiptCreatedAt?: Date): Promise<void> {
     this.logger.log(
       `Memulai pengiriman notifikasi invoice ${invoice.invoiceNumber} ke ${phoneNumber}`,
       WhatsAppNotificationService.name,
     );
 
-    // Validasi nomor telepon minimal
     if (!phoneNumber || phoneNumber.trim().length < 7) {
       this.logger.warn(
         `Nomor telepon tidak valid atau kosong: "${phoneNumber}". Pengiriman dibatalkan.`,
@@ -51,7 +41,6 @@ export class WhatsAppNotificationService {
       return;
     }
 
-    // Format pesan dari entitas invoice
     let message: string;
     try {
       this.logger.log(`Memformat pesan invoice...`, WhatsAppNotificationService.name);
@@ -66,10 +55,9 @@ export class WhatsAppNotificationService {
         formatErr instanceof Error ? formatErr.stack : String(formatErr),
         WhatsAppNotificationService.name,
       );
-      return; // Jangan kirim jika format gagal; invoice tetap tersimpan
+      return;
     }
 
-    // Kirim pesan interaktif dengan tombol "Buatkan PDF"
     try {
       this.logger.log(
         `Mengirim pesan tombol interaktif WhatsApp ke ${phoneNumber}...`,
@@ -81,28 +69,40 @@ export class WhatsAppNotificationService {
           title: '📄 Buatkan PDF',
         },
       ];
+
+      const sendStart = Date.now();
       await this.graphClient.sendInteractiveButtonMessage(phoneNumber, message, buttons);
+      const sendDuration = Date.now() - sendStart;
+
+      this.logger.log(
+        `[Performance] WhatsApp Sending took ${sendDuration}ms untuk invoice: ${invoice.invoiceNumber}`,
+        WhatsAppNotificationService.name,
+      );
       this.logger.log(
         `✅ Notifikasi invoice ${invoice.invoiceNumber} dengan tombol berhasil dikirim ke ${phoneNumber}`,
         WhatsAppNotificationService.name,
       );
+
+      // Hitung dan log durasi total pipeline dari terima gambar struk hingga pesan notifikasi terkirim
+      if (receiptCreatedAt) {
+        const totalPipelineDuration = Date.now() - new Date(receiptCreatedAt).getTime();
+        this.logger.log(
+          `[Performance] Total Pipeline took ${totalPipelineDuration}ms (terima gambar -> invoice dikirim ke WhatsApp)`,
+          WhatsAppNotificationService.name,
+        );
+      }
     } catch (sendErr: any) {
-      // Kegagalan pengiriman WhatsApp TIDAK membatalkan invoice yang sudah tersimpan
       this.logger.error(
         `❌ Gagal mengirim notifikasi WhatsApp untuk invoice ${invoice.invoiceNumber} ke ${phoneNumber}. Invoice tetap valid.`,
         sendErr instanceof Error ? sendErr.stack : String(sendErr),
         WhatsAppNotificationService.name,
       );
-      // Suppress error — jangan propagate ke caller
     }
   }
 
   /**
    * Men-generate PDF invoice on-demand, mengunggah ke WhatsApp Cloud API,
    * dan mengirimkannya ke nomor WhatsApp pengguna sebagai berkas dokumen.
-   *
-   * @param phoneNumber Nomor telepon penerima
-   * @param invoice     Entitas invoice lengkap
    */
   async sendInvoicePdf(phoneNumber: string, invoice: any): Promise<void> {
     this.logger.log(
@@ -115,9 +115,17 @@ export class WhatsAppNotificationService {
     let pdfPath: string;
     try {
       this.logger.log(`Men-generate berkas PDF via PdfService...`, WhatsAppNotificationService.name);
+
+      const pdfStart = Date.now();
       const result = await this.pdfService.generateInvoicePdf(invoice);
       pdfBuffer = result.pdfBuffer;
       pdfPath = result.pdfPath;
+      const pdfDuration = Date.now() - pdfStart;
+
+      this.logger.log(
+        `[Performance] PDF Generation took ${pdfDuration}ms untuk invoice: ${invoice.invoiceNumber}`,
+        WhatsAppNotificationService.name,
+      );
       this.logger.log(`PDF berhasil disimpan di: ${pdfPath}`, WhatsAppNotificationService.name);
     } catch (genErr: any) {
       this.logger.error(
@@ -125,11 +133,10 @@ export class WhatsAppNotificationService {
         genErr instanceof Error ? genErr.stack : String(genErr),
         WhatsAppNotificationService.name,
       );
-      // Kirim pesan teks error ke user agar mereka tahu proses gagal
       try {
         await this.graphClient.sendTextMessage(
           phoneNumber,
-          `⚠️ Maaf, terjadi kesalahan saat membuat berkas PDF untuk invoice *${invoice.invoiceNumber}*. Silakan hubungi admin atau coba lagi nanti.`,
+          `⚠️ Maaf, terjadi kesalahan saat membuat berkas PDF untuk invoice *${invoice.invoiceNumber}*. Silakan coba lagi nanti.`,
         );
       } catch (sendErr) {
         this.logger.error(`Gagal mengirim notifikasi error ke user`, sendErr, WhatsAppNotificationService.name);
@@ -164,11 +171,19 @@ export class WhatsAppNotificationService {
     // 3. Kirim dokumen PDF
     try {
       this.logger.log(`Mengirim dokumen PDF ke ${phoneNumber}...`, WhatsAppNotificationService.name);
+
+      const sendDocStart = Date.now();
       await this.graphClient.sendDocumentMessage(
         phoneNumber,
         mediaId,
         filename,
         `📄 Invoice *${invoice.invoiceNumber}* Anda siap!`,
+      );
+      const sendDocDuration = Date.now() - sendDocStart;
+
+      this.logger.log(
+        `[Performance] WhatsApp Document Sending took ${sendDocDuration}ms untuk invoice: ${invoice.invoiceNumber}`,
+        WhatsAppNotificationService.name,
       );
       this.logger.log(
         `✅ Dokumen PDF invoice ${invoice.invoiceNumber} berhasil dikirim ke ${phoneNumber}`,

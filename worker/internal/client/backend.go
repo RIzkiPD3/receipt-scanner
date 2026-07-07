@@ -29,6 +29,7 @@ type SaveReceiptRequest struct {
 	Total           float64                  `json:"total"`
 	Items           []SaveReceiptItemRequest `json:"items"`
 	ImageURL        string                   `json:"imageUrl,omitempty"`
+	ReceiptID       string                   `json:"receiptId,omitempty"`
 }
 
 // SaveReceiptItemRequest merepresentasikan item dalam SaveReceiptRequest
@@ -54,8 +55,8 @@ func NewBackendClient(baseURL string, httpClient *http.Client, logger *slog.Logg
 }
 
 // SaveReceipt mengirimkan payload data struk belanja ke NestJS Backend
-func (c *BackendClient) SaveReceipt(ctx context.Context, receipt *llmmodel.ReceiptResult, imageUrl string) error {
-	c.logger.Info("Sending receipt", "storeName", receipt.StoreName, "total", receipt.Total)
+func (c *BackendClient) SaveReceipt(ctx context.Context, receipt *llmmodel.ReceiptResult, imageUrl string, receiptId string) error {
+	c.logger.Info("Sending receipt", "storeName", receipt.StoreName, "total", receipt.Total, "receiptId", receiptId)
 
 	itemsReq := make([]SaveReceiptItemRequest, len(receipt.Items))
 	for i, item := range receipt.Items {
@@ -75,6 +76,7 @@ func (c *BackendClient) SaveReceipt(ctx context.Context, receipt *llmmodel.Recei
 		Total:           receipt.Total,
 		Items:           itemsReq,
 		ImageURL:        imageUrl,
+		ReceiptID:       receiptId,
 	}
 
 	payloadBytes, err := json.Marshal(reqPayload)

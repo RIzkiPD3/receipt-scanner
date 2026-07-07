@@ -78,7 +78,7 @@ func (h *ReceiptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Pipeline pemrosesan struk berhasil diselesaikan, menyimpan ke backend", "receiptId", req.ReceiptID)
 
 	// Simpan data struk terstruktur ke backend API
-	if err := h.backendClient.SaveReceipt(r.Context(), result.Receipt, req.ImageURL); err != nil {
+	if err := h.backendClient.SaveReceipt(r.Context(), result.Receipt, req.ImageURL, req.ReceiptID); err != nil {
 		h.logger.Error("Gagal menyimpan hasil struk ke backend", "receiptId", req.ReceiptID, "error", err.Error())
 		h.sendJSON(w, http.StatusInternalServerError, model.ProcessReceiptResponse{
 			Status: "error",

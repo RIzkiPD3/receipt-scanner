@@ -22,5 +22,9 @@ type ProcessReceiptResponse struct {
 
 // HealthResponse adalah struktur response untuk endpoint GET /health
 type HealthResponse struct {
-	Status string `json:"status"`
+	Status  string `json:"status"`
+	Service string `json:"service"`
+	OCR     string `json:"ocr"`
+	AI      string `json:"ai"`
 }
+

@@ -222,3 +222,31 @@ func cleanMarkdownJSON(input string) string {
 
 	return input
 }
+
+// Ping memeriksa apakah layanan NVIDIA API dapat dijangkau
+func (p *NemotronProvider) Ping(ctx context.Context) error {
+	if p.apiKey == "" {
+		return errors.New("NVIDIA API Key is not configured")
+	}
+
+	url := fmt.Sprintf("%s/models", strings.TrimSuffix(p.baseURL, "/"))
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.apiKey))
+	resp, err := p.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("network connection error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Kita anggap status di luar 5xx sebagai reachable (termasuk 401 Unauthorized atau 404 Not Found)
+	// karena itu membuktikan server merespons request HTTP kita.
+	if resp.StatusCode >= 500 {
+		return fmt.Errorf("server returned error status: %d", resp.StatusCode)
+	}
+	return nil
+}
+

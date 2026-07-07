@@ -2,10 +2,28 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { CreateReceiptDto } from '../dto/create-receipt.dto';
 
+// =============================================================================
+// ReceiptsRepository
+// =============================================================================
+// Mengelola operasi database untuk entitas Receipt dan ReceiptItem.
+// =============================================================================
+
 @Injectable()
 export class ReceiptsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Mencari Receipt berdasarkan ID.
+   */
+  async findById(receiptId: string) {
+    return this.prisma.receipt.findUnique({
+      where: { id: receiptId },
+    });
+  }
+
+  /**
+   * Menyimpan data Receipt baru ke database PostgreSQL.
+   */
   async create(data: CreateReceiptDto, userId: string) {
     return this.prisma.$transaction(async (tx: any) => {
       // Simpan data Receipt ke database PostgreSQL menggunakan Prisma Client
@@ -36,6 +54,50 @@ export class ReceiptsRepository {
       }
 
       // Ambil kembali data Receipt beserta ReceiptItems
+      return tx.receipt.findUniqueOrThrow({
+        where: { id: receipt.id },
+        include: { items: true },
+      });
+    });
+  }
+
+  /**
+   * Memperbarui data Receipt PENDING yang sudah ada dengan data hasil ekstraksi OCR + AI.
+   */
+  async update(receiptId: string, data: CreateReceiptDto) {
+    return this.prisma.$transaction(async (tx: any) => {
+      // Update data Receipt
+      const receipt = await tx.receipt.update({
+        where: { id: receiptId },
+        data: {
+          merchantName: data.storeName,
+          transactionDate: data.transactionDate ? new Date(data.transactionDate) : null,
+          subtotal: data.subtotal,
+          tax: data.tax,
+          totalAmount: data.total,
+          status: 'PROCESSED',
+        },
+      });
+
+      // Bersihkan item lama jika ada untuk mencegah duplikasi data
+      await tx.receiptItem.deleteMany({
+        where: { receiptId },
+      });
+
+      // Simpan data ReceiptItems baru
+      if (data.items && data.items.length > 0) {
+        await tx.receiptItem.createMany({
+          data: data.items.map((item) => ({
+            receiptId: receipt.id,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+          })),
+        });
+      }
+
+      // Ambil kembali data lengkap
       return tx.receipt.findUniqueOrThrow({
         where: { id: receipt.id },
         include: { items: true },

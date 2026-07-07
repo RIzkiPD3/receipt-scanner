@@ -92,7 +92,7 @@ export class InvoicesService {
         if (phoneNumber) {
           // Jalankan secara async tanpa await agar tidak memblokir response
           this.whatsappNotification
-            .sendInvoiceSummary(phoneNumber, createdInvoice)
+            .sendInvoiceSummary(phoneNumber, createdInvoice, receipt.createdAt)
             .catch((err) =>
               this.logger.error(
                 `Background WhatsApp notification gagal untuk invoice ${invoiceNumber}`,

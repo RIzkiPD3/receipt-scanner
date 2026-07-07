@@ -3,20 +3,18 @@ import { ConfigService } from '@nestjs/config';
 import type { WhatsAppWebhookPayload } from './interfaces/webhook-payload.interface';
 import { WhatsAppParser } from './whatsapp-parser.service';
 import { PdfRequestHandler } from './services/pdf-request.handler';
+import { PrismaService } from '../../database/prisma.service';
+import { WhatsAppMediaService } from './services/whatsapp-media.service';
+import { WorkerClient } from '../worker/client/worker.client';
 
 // =============================================================================
 // WebhookService
 // =============================================================================
-// Bertanggung jawab atas dua hal:
-//   1. Memverifikasi token saat Meta melakukan handshake webhook (GET)
-//   2. Menerima dan mem-log event webhook masuk (POST)
-//
-// Di TASK-008, Service ini menggunakan WhatsAppParser untuk menyaring dan
-// mengurai payload menjadi objek internal IncomingMessage, lalu mencatatnya
-// ke logger.
-//
-// Di TASK-017, Service ini mengintegrasikan PdfRequestHandler untuk memproses
-// pesan interaktif tombol balasan "Buatkan PDF" dari pengguna.
+// Mengelola webhook Meta WhatsApp Cloud API.
+//   1. Verifikasi handshake token (GET)
+//   2. Memproses event WhatsApp masuk (POST) secara asinkron
+//      - Jika bertipe 'image' -> unduh media, simpan PENDING receipt, panggil worker
+//      - Jika bertipe 'interactive' -> generate PDF via PdfRequestHandler
 // =============================================================================
 
 @Injectable()
@@ -27,23 +25,14 @@ export class WebhookService {
     private readonly configService: ConfigService,
     private readonly parser: WhatsAppParser,
     private readonly pdfRequestHandler: PdfRequestHandler,
+    private readonly mediaService: WhatsAppMediaService,
+    private readonly workerClient: WorkerClient,
+    private readonly prisma: PrismaService,
   ) {}
 
-  // ---------------------------------------------------------------------------
-  // verifyWebhook
-  // ---------------------------------------------------------------------------
-  // Dipanggil oleh GET /api/webhook saat Meta melakukan verifikasi awal.
-  //
-  // Alur verifikasi Meta:
-  //   1. Meta mengirim GET dengan hub.mode=subscribe, hub.verify_token, hub.challenge
-  //   2. Kita bandingkan hub.verify_token dengan WHATSAPP_VERIFY_TOKEN di .env
-  //   3. Jika cocok, kita kembalikan hub.challenge sebagai plain text
-  //   4. Jika tidak cocok, kita lempar ForbiddenException → 403
-  //
-  // ForbiddenException dipilih (bukan UnauthorizedException/401) karena:
-  //   - 401 mengimplikasikan autentikasi diperlukan (login)
-  //   - 403 lebih tepat: request diidentifikasi tapi ditolak karena token salah
-  // ---------------------------------------------------------------------------
+  /**
+   * Handshake verifikasi token dengan Meta Developer Platform.
+   */
   verifyWebhook(mode: string, token: string, challenge: string): string {
     const verifyToken = this.configService.get<string>('WHATSAPP_VERIFY_TOKEN');
 
@@ -68,24 +57,10 @@ export class WebhookService {
     return challenge;
   }
 
-  // ---------------------------------------------------------------------------
-  // handleWebhookEvent
-  // ---------------------------------------------------------------------------
-  // Dipanggil oleh POST /api/webhook setiap kali Meta mengirim event.
-  //
-  // Strategi logging terstruktur:
-  //   - Log level INFO untuk event normal (pesan masuk, status update)
-  //   - Log level WARN untuk event tanpa pesan (misalnya hanya status delivery)
-  //   - Log level ERROR untuk entry yang mengandung error dari Meta
-  //   - Data sensitif (konten pesan) hanya di-log pada level DEBUG
-  //
-  // Mengapa return void dan bukan throw error?
-  //   Meta mengharapkan response 200 OK secepatnya. Jika kita throw error,
-  //   Meta akan retry dan bisa mengakibatkan pemrosesan duplikat.
-  //   Error handling internal dicatat ke logger tanpa mempengaruhi response.
-  // ---------------------------------------------------------------------------
+  /**
+   * Menangani event WhatsApp masuk dari Meta.
+   */
   handleWebhookEvent(payload: WhatsAppWebhookPayload): void {
-    // Validasi struktur dasar payload
     if (!payload || payload.object !== 'whatsapp_business_account') {
       this.logger.warn(
         `Received unknown webhook object: ${payload?.object ?? 'undefined'}`,
@@ -94,19 +69,29 @@ export class WebhookService {
       return;
     }
 
-    // Panggil Parser untuk mengurai data pesan masuk
     const parsedMessages = this.parser.parse(payload);
     for (const msg of parsedMessages) {
       this.logger.log(
         `[Parsed Message] Tipe: ${msg.type.toUpperCase()} | Pengirim: ${msg.from} | MsgID: ${msg.messageId}`,
         WebhookService.name,
       );
-      this.logger.debug(
-        `Detail Pesan Terurai: ${JSON.stringify(msg)}`,
-        WebhookService.name,
-      );
 
-      // Pemicu pembuatan PDF on-demand (fire-and-forget)
+      // ── 1. Pesan Gambar (Struk) ──
+      if (msg.type === 'image' && msg.mediaId) {
+        this.logger.log(
+          `Webhook received: gambar struk dari ${msg.from} (MediaID: ${msg.mediaId})`,
+          WebhookService.name,
+        );
+        this.processReceiptImageBackground(msg.from, msg.mediaId, msg.messageId).catch((err) =>
+          this.logger.error(
+            `Background Receipt Image handler gagal untuk ${msg.from}`,
+            err instanceof Error ? err.stack : String(err),
+            WebhookService.name,
+          ),
+        );
+      }
+
+      // ── 2. Pesan Interaktif (Tombol PDF) ──
       if (msg.type === 'interactive' && msg.buttonReplyId) {
         if (this.pdfRequestHandler.isPdfRequest(msg.buttonReplyId)) {
           this.pdfRequestHandler
@@ -122,16 +107,12 @@ export class WebhookService {
       }
     }
 
-    // Iterasi setiap entry (bisa lebih dari satu dalam satu payload) untuk status & error
+    // Logging status pengiriman (delivery reports) & error dari Meta
     for (const entry of payload.entry ?? []) {
       for (const change of entry.changes ?? []) {
         const { value } = change;
+        if (!value) continue;
 
-        if (!value) {
-          continue;
-        }
-
-        // --- Event: Status Update (sent/delivered/read/failed) ---
         if (value.statuses && value.statuses.length > 0) {
           for (const status of value.statuses) {
             this.logger.log(
@@ -141,7 +122,6 @@ export class WebhookService {
           }
         }
 
-        // --- Event: Error dari Meta ---
         if (value.errors && value.errors.length > 0) {
           for (const error of value.errors) {
             this.logger.error(
@@ -153,5 +133,79 @@ export class WebhookService {
         }
       }
     }
+  }
+
+  /**
+   * Mengunduh gambar struk, menyimpannya di DB (PENDING), lalu memicu Go worker secara asinkron.
+   */
+  private async processReceiptImageBackground(from: string, mediaId: string, messageId: string) {
+    this.logger.log(`[OCR Pipeline] Menerima gambar struk dari ${from}. Memulai pengolahan...`, WebhookService.name);
+
+    // 1. Dapatkan atau buat User di DB
+    let user = await this.prisma.user.findUnique({
+      where: { phoneNumber: from },
+    });
+    if (!user) {
+      this.logger.log(`Membuat user baru untuk nomor telepon ${from}...`, WebhookService.name);
+      user = await this.prisma.user.create({
+        data: {
+          phoneNumber: from,
+          name: `WhatsApp User ${from.substring(from.length - 4)}`,
+        },
+      });
+    }
+
+    // 2. Download media dari WhatsApp Cloud API
+    const downloadStart = Date.now();
+    const downloadedFile = await this.mediaService.downloadMedia(mediaId);
+    const downloadDuration = Date.now() - downloadStart;
+    this.logger.log(
+      `[Performance] Media Download took ${downloadDuration}ms untuk mediaId: ${mediaId}`,
+      WebhookService.name,
+    );
+    this.logger.log(`Media downloaded: ${downloadedFile.filename}`, WebhookService.name);
+
+    // 3. Bangun URL publik gambar
+    const appUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3000';
+    const imageUrl = `${appUrl}/uploads/${downloadedFile.filename}`;
+
+    // 4. Simpan Receipt awal berstatus PENDING di database
+    const dbSaveStart = Date.now();
+    const receipt = await this.prisma.receipt.create({
+      data: {
+        userId: user.id,
+        whatsappMessageId: messageId,
+        whatsappMediaId: mediaId,
+        imageUrl: imageUrl,
+        status: 'PENDING',
+      },
+    });
+    const dbSaveDuration = Date.now() - dbSaveStart;
+    this.logger.log(
+      `[Performance] Database Save took ${dbSaveDuration}ms untuk receiptId: ${receipt.id}`,
+      WebhookService.name,
+    );
+    this.logger.log(`Receipt saved (PENDING) ID: ${receipt.id}`, WebhookService.name);
+
+    // 5. Hubungi Go Worker secara asinkron (fire-and-forget)
+    this.logger.log(
+      `[OCR Pipeline] Mengirim receiptId ${receipt.id} ke Golang Worker secara asinkron...`,
+      WebhookService.name,
+    );
+    
+    this.workerClient.sendToWorker(receipt.id, imageUrl)
+      .then((res) => {
+        this.logger.log(
+          `[OCR Pipeline] Golang Worker sukses memproses receiptId ${receipt.id}: status=${res.status}, message=${res.message}`,
+          WebhookService.name,
+        );
+      })
+      .catch((err) => {
+        this.logger.error(
+          `[OCR Pipeline] Gagal mengirim receiptId ${receipt.id} ke Golang Worker`,
+          err instanceof Error ? err.stack : String(err),
+          WebhookService.name,
+        );
+      });
   }
 }
