@@ -56,6 +56,9 @@ export class InvoiceTemplateHelper {
    * Contoh: (12500, 'IDR') → 'IDR 12,500.00'
    */
   private formatCurrency(amount: number, currency: string): string {
+    if (currency === 'IDR') {
+      return `Rp ${Math.round(amount).toLocaleString('id-ID')}`;
+    }
     return `${currency} ${amount.toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,

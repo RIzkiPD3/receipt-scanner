@@ -72,7 +72,7 @@ describe('WhatsAppGraphClient', () => {
 
       const [calledUrl] = mockFetch.mock.calls[0];
       expect(calledUrl).toBe(
-        `https://graph.facebook.com/v21.0/${MOCK_PHONE_ID}/messages`,
+        `https://graph.facebook.com/v25.0/${MOCK_PHONE_ID}/messages`,
       );
     });
 
@@ -158,7 +158,7 @@ describe('WhatsAppGraphClient', () => {
 
       const [calledUrl, options] = mockFetch.mock.calls[0];
       expect(calledUrl).toBe(
-        `https://graph.facebook.com/v21.0/${MOCK_PHONE_ID}/messages`,
+        `https://graph.facebook.com/v25.0/${MOCK_PHONE_ID}/messages`,
       );
       expect(options.method).toBe('POST');
 
@@ -221,7 +221,7 @@ describe('WhatsAppGraphClient', () => {
       expect(mediaId).toBe('media-uploaded-id-xyz');
       const [calledUrl, options] = mockFetch.mock.calls[0];
       expect(calledUrl).toBe(
-        `https://graph.facebook.com/v21.0/${MOCK_PHONE_ID}/media`,
+        `https://graph.facebook.com/v25.0/${MOCK_PHONE_ID}/media`,
       );
       expect(options.method).toBe('POST');
       expect(options.body).toBeInstanceOf(FormData);
@@ -263,7 +263,7 @@ describe('WhatsAppGraphClient', () => {
 
       const [calledUrl, options] = mockFetch.mock.calls[0];
       expect(calledUrl).toBe(
-        `https://graph.facebook.com/v21.0/${MOCK_PHONE_ID}/messages`,
+        `https://graph.facebook.com/v25.0/${MOCK_PHONE_ID}/messages`,
       );
       expect(options.method).toBe('POST');
 

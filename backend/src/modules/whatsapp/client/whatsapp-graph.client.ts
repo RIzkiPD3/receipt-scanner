@@ -28,7 +28,7 @@ export interface MetaMediaMetadata {
 @Injectable()
 export class WhatsAppGraphClient {
   private readonly logger = new Logger(WhatsAppGraphClient.name);
-  private readonly graphApiVersion = 'v21.0';
+  private readonly graphApiVersion = 'v25.0';
 
   constructor(private readonly configService: ConfigService) {}
 

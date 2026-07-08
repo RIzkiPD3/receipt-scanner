@@ -20,8 +20,8 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 
 # Copy package manifests dan Prisma schema lebih dulu untuk layer caching —
-# lapisan ini hanya diinvalidasi jika package.json atau schema berubah.
-COPY package.json package-lock.json ./
+# lapisan ini hanya diinvalidasi jika package.json, schema, atau tsconfig.json berubah.
+COPY package.json package-lock.json tsconfig.json ./
 COPY prisma/ ./prisma/
 COPY prisma.config.ts ./
 
@@ -36,7 +36,7 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json tsconfig.json ./
 COPY prisma/ ./prisma/
 COPY prisma.config.ts ./
 
@@ -105,4 +105,5 @@ EXPOSE 3000
 
 # Jalankan migrasi Prisma lalu start aplikasi.
 # Menggunakan sh -c agar dua perintah dapat dijalankan berurutan.
-CMD ["sh", "-c", "node node_modules/.bin/prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "node node_modules/.bin/prisma migrate deploy && node dist/src/main"]
+

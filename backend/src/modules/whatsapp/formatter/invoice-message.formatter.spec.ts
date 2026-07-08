@@ -15,7 +15,7 @@ describe('InvoiceMessageFormatter', () => {
     invoiceNumber: 'INV-20260704-0001',
     merchantName: 'Warung Makan Bahagia',
     issueDate: new Date('2026-07-04T14:14:36.775Z'),
-    currency: 'IDR',
+    currency: 'USD',
     subtotal: 50000,
     taxAmount: 5000,
     discountAmount: 2500,
@@ -74,8 +74,8 @@ describe('InvoiceMessageFormatter', () => {
   describe('format currency', () => {
     it('harus memformat total amount dengan simbol currency', () => {
       const result = formatter.format(baseInvoice);
-      // Expects "IDR 52,500.00"
-      expect(result).toContain('IDR');
+      // Expects "USD 52,500.00"
+      expect(result).toContain('USD');
       expect(result).toContain('52,500.00');
     });
 
@@ -179,7 +179,7 @@ describe('InvoiceMessageFormatter', () => {
     it('harus menampilkan baris diskon ketika discountAmount > 0', () => {
       const result = formatter.format(baseInvoice);
       expect(result).toContain('Diskon');
-      expect(result).toContain('-IDR 2,500.00');
+      expect(result).toContain('-USD 2,500.00');
     });
 
     it('harus menyembunyikan baris diskon ketika discountAmount = 0', () => {
@@ -230,6 +230,22 @@ describe('InvoiceMessageFormatter', () => {
       const result = formatter.format(invoice);
       expect(result).toContain('USD');
       expect(result).toContain('99.99');
+    });
+
+    it('harus memformat dengan format Rp ketika currency adalah IDR', () => {
+      const invoice = { 
+        ...baseInvoice, 
+        currency: 'IDR', 
+        totalAmount: 52500, 
+        subtotal: 50000, 
+        taxAmount: 5000, 
+        discountAmount: 2500 
+      };
+      const result = formatter.format(invoice);
+      expect(result).toContain('Rp 52.500');
+      expect(result).toContain('Rp 50.000');
+      expect(result).toContain('Rp 5.000');
+      expect(result).toContain('-Rp 2.500');
     });
   });
 });

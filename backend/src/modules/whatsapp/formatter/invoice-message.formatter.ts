@@ -18,6 +18,9 @@ export class InvoiceMessageFormatter {
    * Contoh: 12500 → "12,500.00"
    */
   private formatCurrency(amount: number, currency: string): string {
+    if (currency === 'IDR') {
+      return `Rp ${Math.round(amount).toLocaleString('id-ID')}`;
+    }
     return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
@@ -89,7 +92,7 @@ export class InvoiceMessageFormatter {
       );
     }
     lines.push(
-      `💵 *Total     : ${this.formatCurrency(total, invoice.currency)}*`,
+      `💰 *Total     : ${this.formatCurrency(total, invoice.currency)}*`,
     );
     lines.push(`━━━━━━━━━━━━━━━━━━━━━━`);
     lines.push(`📊 Status     : ${invoice.status}`);

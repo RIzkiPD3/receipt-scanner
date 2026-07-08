@@ -68,11 +68,14 @@ func (p *NemotronProvider) ExtractReceipt(ctx context.Context, rawText string) (
 
 	systemPrompt := `You are an expert receipt parser.
 
-Extract receipt information into JSON only.
+Extract receipt information into JSON only. Never explain anything. Return valid JSON.
 
-Never explain anything.
-
-Return valid JSON.
+Guidelines for Indonesian receipts:
+1. A dot (.) is a thousands separator (e.g., "100.000" is 100000). A comma (,) is a decimal separator (e.g., "12.500,50" is 12500.5). Convert them correctly to plain numbers.
+2. The final "total" should be the actual amount paid by the consumer (e.g. "Dibayar Konsumen", "TOTAL", "Grand Total", "CASH").
+3. Do NOT add government subsidies (e.g. "Subsidi Pemerintah") to the total or treat them as tax. Subsidies are discount-like deductions.
+4. "subtotal" is the amount before taxes/discounts/subsidies.
+5. All numeric values in JSON must be numbers (not strings, no dots or commas inside).
 
 Required JSON structure:
 

@@ -6,6 +6,7 @@ import { PdfRequestHandler } from './services/pdf-request.handler';
 import { PrismaService } from '../../database/prisma.service';
 import { WhatsAppMediaService } from './services/whatsapp-media.service';
 import { WorkerClient } from '../worker/client/worker.client';
+import { WhatsAppGraphClient } from './client/whatsapp-graph.client';
 
 // =============================================================================
 // WebhookService
@@ -28,6 +29,7 @@ export class WebhookService {
     private readonly mediaService: WhatsAppMediaService,
     private readonly workerClient: WorkerClient,
     private readonly prisma: PrismaService,
+    private readonly whatsappClient: WhatsAppGraphClient,
   ) {}
 
   /**
@@ -169,17 +171,42 @@ export class WebhookService {
     }
 
     // 2. Download media dari WhatsApp Cloud API
-    const downloadStart = Date.now();
-    const downloadedFile = await this.mediaService.downloadMedia(mediaId);
-    const downloadDuration = Date.now() - downloadStart;
-    this.logger.log(
-      `[Performance] Media Download took ${downloadDuration}ms untuk mediaId: ${mediaId}`,
-      WebhookService.name,
-    );
-    this.logger.log(
-      `Media downloaded: ${downloadedFile.filename}`,
-      WebhookService.name,
-    );
+    let downloadedFile: any;
+    try {
+      const downloadStart = Date.now();
+      downloadedFile = await this.mediaService.downloadMedia(mediaId);
+      const downloadDuration = Date.now() - downloadStart;
+      this.logger.log(
+        `[Performance] Media Download took ${downloadDuration}ms untuk mediaId: ${mediaId}`,
+        WebhookService.name,
+      );
+      this.logger.log(
+        `Media downloaded: ${downloadedFile.filename}`,
+        WebhookService.name,
+      );
+    } catch (err: any) {
+      this.logger.error(
+        `Gagal mengunduh media untuk ${from}: ${err.message}`,
+        err instanceof Error ? err.stack : String(err),
+        WebhookService.name,
+      );
+
+      let userFriendlyMsg = `⚠️ *Pencatatan Gagal*\n\nGagal memproses gambar struk Anda. `;
+      if (err.message && err.message.includes('Format file tidak didukung')) {
+        userFriendlyMsg += `Format file tidak didukung. Sistem hanya menerima file gambar untuk struk belanja.`;
+      } else {
+        userFriendlyMsg += `Gagal mengunduh gambar struk. Mohon pastikan file yang dikirim adalah gambar struk yang valid dan coba kembali.`;
+      }
+
+      await this.whatsappClient.sendTextMessage(from, userFriendlyMsg).catch((sendErr) => {
+        this.logger.error(
+          `Gagal mengirimkan notifikasi error download ke user ${from}`,
+          sendErr instanceof Error ? sendErr.stack : String(sendErr),
+          WebhookService.name,
+        );
+      });
+      throw err;
+    }
 
     // 3. Bangun URL publik gambar
     const appUrl =
@@ -207,6 +234,18 @@ export class WebhookService {
       WebhookService.name,
     );
 
+    // Update status receipt ke PROCESSING di database
+    await this.prisma.receipt.update({
+      where: { id: receipt.id },
+      data: { status: 'PROCESSING' },
+    }).catch((dbErr) => {
+      this.logger.error(
+        `Gagal update status PROCESSING di DB untuk receiptId ${receipt.id}`,
+        dbErr instanceof Error ? dbErr.stack : String(dbErr),
+        WebhookService.name,
+      );
+    });
+
     // 5. Hubungi Go Worker secara asinkron (fire-and-forget)
     this.logger.log(
       `[OCR Pipeline] Mengirim receiptId ${receipt.id} ke Golang Worker secara asinkron...`,
@@ -221,12 +260,51 @@ export class WebhookService {
           WebhookService.name,
         );
       })
-      .catch((err) => {
+      .catch(async (err) => {
         this.logger.error(
           `[OCR Pipeline] Gagal mengirim receiptId ${receipt.id} ke Golang Worker`,
           err instanceof Error ? err.stack : String(err),
           WebhookService.name,
         );
+
+        // Update status receipt ke FAILED di database
+        await this.prisma.receipt.update({
+          where: { id: receipt.id },
+          data: { status: 'FAILED' },
+        }).catch((dbErr) => {
+          this.logger.error(
+            `Gagal update status FAILED di DB untuk receiptId ${receipt.id}`,
+            dbErr instanceof Error ? dbErr.stack : String(dbErr),
+            WebhookService.name,
+          );
+        });
+
+        // Kirim notifikasi error ramah pengguna ke WhatsApp
+        let userFriendlyMsg = `⚠️ *Pencatatan Gagal*\n\n`;
+        const errMsg = (err.message || '').toLowerCase();
+
+        if (
+          errMsg.includes('ocr menghasilkan teks kosong') ||
+          errMsg.includes('empty ocr text') ||
+          errMsg.includes('teks kosong')
+        ) {
+          userFriendlyMsg += `Gambar struk kurang jelas atau buram. Mohon kirimkan ulang dengan gambar yang lebih jelas, beresolusi cukup, dan pencahayaan yang terang.`;
+        } else if (
+          errMsg.includes('ai extraction failed') ||
+          errMsg.includes('ocr failed')
+        ) {
+          userFriendlyMsg += `Sistem gagal mendeteksi informasi transaksi pada struk. Mohon pastikan Anda mengambil foto struk belanja yang valid secara tegak lurus dan utuh.`;
+        } else {
+          userFriendlyMsg += `Terjadi kesalahan sistem saat memproses struk Anda. Mohon coba beberapa saat lagi.`;
+        }
+
+        await this.whatsappClient.sendTextMessage(from, userFriendlyMsg).catch((sendErr) => {
+          this.logger.error(
+            `Gagal mengirimkan notifikasi error worker ke user ${from}`,
+            sendErr instanceof Error ? sendErr.stack : String(sendErr),
+            WebhookService.name,
+          );
+        });
       });
   }
 }

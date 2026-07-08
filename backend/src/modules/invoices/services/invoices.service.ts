@@ -89,7 +89,7 @@ export class InvoicesService {
           taxAmount: receipt.tax ?? 0,
           discountAmount: 0,
           totalAmount: receipt.totalAmount ?? 0,
-          currency: receipt.currency ?? 'USD',
+          currency: receipt.currency ?? 'IDR',
         };
 
         const itemsData = receipt.items.map((item: any) => ({

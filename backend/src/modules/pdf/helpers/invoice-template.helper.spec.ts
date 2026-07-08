@@ -46,7 +46,7 @@ describe('InvoiceTemplateHelper', () => {
     invoiceNumber: 'INV-20260706-0001',
     merchantName: 'Indomaret Keren',
     issueDate: new Date('2026-07-06T12:00:00Z'),
-    currency: 'IDR',
+    currency: 'USD',
     status: 'PAID',
     subtotal: 15000,
     taxAmount: 1500,
@@ -78,7 +78,7 @@ describe('InvoiceTemplateHelper', () => {
       const html = helper.render(mockInvoice);
       expect(html).toContain('INV-20260706-0001');
       expect(html).toContain('Indomaret Keren');
-      expect(html).toContain('IDR');
+      expect(html).toContain('USD');
       expect(html).toContain('PAID');
       expect(html).toContain('paid'); // statusClass lowercase
     });
@@ -92,9 +92,9 @@ describe('InvoiceTemplateHelper', () => {
       const html = helper.render(mockInvoice);
       expect(html).toContain('Roti Keju');
       expect(html).toContain('Kopi Susu');
-      expect(html).toContain('IDR 5,000.00');
-      expect(html).toContain('IDR 6,000.00');
-      expect(html).toContain('IDR 10,000.00');
+      expect(html).toContain('USD 5,000.00');
+      expect(html).toContain('USD 6,000.00');
+      expect(html).toContain('USD 10,000.00');
       // Verifikasi kelas CSS premium
       expect(html).toContain('class="item-name"');
       expect(html).toContain('class="center"');
@@ -113,10 +113,10 @@ describe('InvoiceTemplateHelper', () => {
       expect(html).toContain('Pajak');
       expect(html).toContain('Diskon');
       // Nilai nominal
-      expect(html).toContain('IDR 15,000.00');
-      expect(html).toContain('IDR 1,500.00');
-      expect(html).toContain('-IDR 500.00');
-      expect(html).toContain('IDR 16,000.00');
+      expect(html).toContain('USD 15,000.00');
+      expect(html).toContain('USD 1,500.00');
+      expect(html).toContain('-USD 500.00');
+      expect(html).toContain('USD 16,000.00');
       // Struktur div baru (bukan tr/td)
       expect(html).toContain('class="summary-row"');
       expect(html).toContain('class="summary-label"');
@@ -147,6 +147,14 @@ describe('InvoiceTemplateHelper', () => {
     it('harus menampilkan generatedAt timestamp WIB di footer', () => {
       const html = helper.render(mockInvoice);
       expect(html).toContain('WIB');
+    });
+
+    it('harus memformat mata uang IDR dengan format Rp tanpa desimal', () => {
+      const idrInvoice = { ...mockInvoice, currency: 'IDR' };
+      const html = helper.render(idrInvoice);
+      expect(html).toContain('Rp 16.000');
+      expect(html).toContain('Rp 15.000');
+      expect(html).toContain('-Rp 500');
     });
   });
 });

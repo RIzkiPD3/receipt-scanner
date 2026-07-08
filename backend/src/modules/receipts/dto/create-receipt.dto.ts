@@ -34,8 +34,8 @@ export class CreateReceiptDto {
   storeName: string;
 
   @IsString()
-  @IsNotEmpty()
-  transactionDate: string;
+  @IsOptional()
+  transactionDate?: string;
 
   @IsNumber()
   @Min(0)

@@ -47,7 +47,7 @@ export class InvoicesRepository {
           taxAmount: data.taxAmount,
           discountAmount: data.discountAmount ?? 0,
           totalAmount: data.totalAmount,
-          currency: data.currency ?? 'USD',
+          currency: data.currency ?? 'IDR',
           status: 'DRAFT',
         },
       });

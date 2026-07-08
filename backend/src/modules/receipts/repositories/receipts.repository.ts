@@ -2,6 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { CreateReceiptDto } from '../dto/create-receipt.dto';
 
+function parseSafeDate(dateStr: string | null | undefined): Date | null {
+  if (!dateStr) return null;
+  const parsed = new Date(dateStr);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
 // =============================================================================
 // ReceiptsRepository
 // =============================================================================
@@ -32,9 +38,7 @@ export class ReceiptsRepository {
           userId: userId,
           imageUrl: data.imageUrl ?? 'http://placeholder.com/receipt.jpg',
           merchantName: data.storeName,
-          transactionDate: data.transactionDate
-            ? new Date(data.transactionDate)
-            : null,
+          transactionDate: parseSafeDate(data.transactionDate),
           subtotal: data.subtotal,
           tax: data.tax,
           totalAmount: data.total,
@@ -73,9 +77,7 @@ export class ReceiptsRepository {
         where: { id: receiptId },
         data: {
           merchantName: data.storeName,
-          transactionDate: data.transactionDate
-            ? new Date(data.transactionDate)
-            : null,
+          transactionDate: parseSafeDate(data.transactionDate),
           subtotal: data.subtotal,
           tax: data.tax,
           totalAmount: data.total,

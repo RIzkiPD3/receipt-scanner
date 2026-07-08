@@ -7,6 +7,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { WhatsAppMediaService } from './services/whatsapp-media.service';
 import { WorkerClient } from '../worker/client/worker.client';
 import { ForbiddenException } from '@nestjs/common';
+import { WhatsAppGraphClient } from './client/whatsapp-graph.client';
 
 // =============================================================================
 // WebhookService — Unit Tests
@@ -20,6 +21,7 @@ describe('WebhookService', () => {
   let mediaService: jest.Mocked<WhatsAppMediaService>;
   let workerClient: jest.Mocked<WorkerClient>;
   let prisma: jest.Mocked<PrismaService>;
+  let whatsappClient: jest.Mocked<WhatsAppGraphClient>;
 
   beforeEach(async () => {
     const mockConfigService = {
@@ -47,6 +49,10 @@ describe('WebhookService', () => {
       sendToWorker: jest.fn(),
     };
 
+    const mockWhatsAppGraphClient = {
+      sendTextMessage: jest.fn().mockResolvedValue(undefined),
+    };
+
     const mockPrisma = {
       user: {
         findUnique: jest.fn(),
@@ -54,6 +60,7 @@ describe('WebhookService', () => {
       },
       receipt: {
         create: jest.fn(),
+        update: jest.fn().mockResolvedValue({} as any),
       },
     };
 
@@ -66,6 +73,7 @@ describe('WebhookService', () => {
         { provide: WhatsAppMediaService, useValue: mockMediaService },
         { provide: WorkerClient, useValue: mockWorkerClient },
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: WhatsAppGraphClient, useValue: mockWhatsAppGraphClient },
       ],
     }).compile();
 
@@ -76,6 +84,7 @@ describe('WebhookService', () => {
     mediaService = module.get(WhatsAppMediaService);
     workerClient = module.get(WorkerClient);
     prisma = module.get(PrismaService);
+    whatsappClient = module.get(WhatsAppGraphClient);
   });
 
   afterEach(() => {
@@ -176,6 +185,67 @@ describe('WebhookService', () => {
       expect(workerClient.sendToWorker).toHaveBeenCalledWith(
         'receipt-uuid-abc',
         'http://test-server/uploads/media-abc-123.jpg',
+      );
+    });
+
+    it('harus mengirim pesan WhatsApp error jika downloadMedia gagal', async () => {
+      const mockMessage = {
+        type: 'image',
+        from: '628123456789',
+        messageId: 'msg-image-123',
+        mediaId: 'media-abc-123',
+      };
+      parser.parse.mockReturnValue([mockMessage as any]);
+
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-id-123' } as any);
+      mediaService.downloadMedia.mockRejectedValue(new Error('Format file tidak didukung'));
+
+      service.handleWebhookEvent(basePayload);
+
+      await new Promise((resolve) => process.nextTick(resolve));
+
+      expect(mediaService.downloadMedia).toHaveBeenCalledWith('media-abc-123');
+      expect(whatsappClient.sendTextMessage).toHaveBeenCalledWith(
+        '628123456789',
+        expect.stringContaining('Format file tidak didukung'),
+      );
+    });
+
+    it('harus mengirim pesan WhatsApp error dan mengubah status ke FAILED jika worker gagal', async () => {
+      const mockMessage = {
+        type: 'image',
+        from: '628123456789',
+        messageId: 'msg-image-123',
+        mediaId: 'media-abc-123',
+      };
+      parser.parse.mockReturnValue([mockMessage as any]);
+
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-id-123' } as any);
+      mediaService.downloadMedia.mockResolvedValue({
+        filename: 'media-abc-123.jpg',
+      } as any);
+      prisma.receipt.create.mockResolvedValue({
+        id: 'receipt-uuid-abc',
+      } as any);
+      prisma.receipt.update.mockResolvedValue({} as any);
+      workerClient.sendToWorker.mockRejectedValue(new Error('ocr menghasilkan teks kosong'));
+
+      service.handleWebhookEvent(basePayload);
+
+      await new Promise((resolve) => process.nextTick(resolve));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(prisma.receipt.update).toHaveBeenCalledWith({
+        where: { id: 'receipt-uuid-abc' },
+        data: { status: 'PROCESSING' },
+      });
+      expect(prisma.receipt.update).toHaveBeenCalledWith({
+        where: { id: 'receipt-uuid-abc' },
+        data: { status: 'FAILED' },
+      });
+      expect(whatsappClient.sendTextMessage).toHaveBeenCalledWith(
+        '628123456789',
+        expect.stringContaining('kurang jelas atau buram'),
       );
     });
   });
