@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"invoicego/worker/internal/client"
 	"invoicego/worker/internal/config"
 	"invoicego/worker/internal/handler"
 	llmprovider "invoicego/worker/internal/llm/provider"
 	ocrprovider "invoicego/worker/internal/ocr/provider"
 	ocrservice "invoicego/worker/internal/ocr/service"
-	"invoicego/worker/internal/client"
 	"invoicego/worker/internal/processing"
+	"invoicego/worker/internal/service"
 	"log/slog"
 	"net/http"
 	"os"
@@ -39,15 +40,31 @@ func main() {
 
 	logger.Info("InvoiceGo Golang Worker starting...", "env", cfg.Env, "port", cfg.Port)
 
-	// 3. Inisialisasi OCR Provider (Tesseract CLI)
+	// 3. Inisialisasi Tesseract OCR Provider (selalu diinisialisasi sebagai fallback/default)
 	logger.Info("Menginisialisasi Tesseract OCR Provider...",
 		"tesseractPath", cfg.TesseractPath,
 		"tempDownloadDir", cfg.TempDownloadDir,
 	)
 	tesseractProvider := ocrprovider.NewTesseractProvider(cfg.TesseractPath, logger)
 
-	// 4. Inisialisasi OCR Service (download + OCR)
+	// 4. Inisialisasi Tesseract OCR Service
 	ocrSvc := ocrservice.NewOCRService(tesseractProvider, cfg.TempDownloadDir, logger)
+
+	// Inisialisasi PaddleOCR jika dikonfigurasi
+	var paddleOcrSvc *service.OCRService
+	var healthOcrProvider interface {
+		Ping(ctx context.Context) error
+	}
+	healthOcrProvider = tesseractProvider
+
+	if cfg.OcrEngine == "paddle" {
+		logger.Info("Menginisialisasi PaddleOCR Service...",
+			"pythonPath", cfg.PythonPath,
+			"paddleOcrPath", cfg.PaddleOcrPath,
+		)
+		paddleOcrSvc = service.NewOCRService(cfg.PythonPath, cfg.PaddleOcrPath, logger)
+		healthOcrProvider = paddleOcrSvc
+	}
 
 	// 5. Inisialisasi LLM Provider (NVIDIA Nemotron)
 	logger.Info("Menginisialisasi NVIDIA Nemotron LLM Provider...",
@@ -64,8 +81,8 @@ func main() {
 	processingSvc := processing.NewProcessingService(ocrSvc, llmProv, logger)
 
 	// 7. Inisialisasi handler dengan dependency injection
-	healthHandler := handler.NewHealthHandler(tesseractProvider, llmProv, logger)
-	receiptHandler := handler.NewReceiptHandler(processingSvc, backendClient, logger)
+	healthHandler := handler.NewHealthHandler(healthOcrProvider, llmProv, logger)
+	receiptHandler := handler.NewReceiptHandler(processingSvc, paddleOcrSvc, cfg.OcrEngine, cfg.TempDownloadDir, backendClient, logger)
 
 	// 8. Daftarkan routes ke ServeMux
 	mux := http.NewServeMux()

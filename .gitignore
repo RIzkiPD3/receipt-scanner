@@ -50,3 +50,12 @@ lerna-debug.log*
 *.sw?
 .DS_Store
 Thumbs.db
+
+# Python virtual environments and cache
+worker/.venv/
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+.pytest_cache/

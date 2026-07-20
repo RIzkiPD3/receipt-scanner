@@ -12,7 +12,10 @@ type Config struct {
 	AiServiceApiKey    string
 	AiModelName        string
 	BackendCallbackUrl string
+	OcrEngine          string
 	TesseractPath      string
+	PythonPath         string
+	PaddleOcrPath      string
 	TempDownloadDir    string
 	NvidiaApiKey       string
 	NvidiaBaseUrl      string
@@ -30,7 +33,10 @@ func LoadConfig() (*Config, error) {
 		AiServiceApiKey:    getEnv("AI_SERVICE_API_KEY", ""),
 		AiModelName:        getEnv("AI_MODEL_NAME", "gemini-1.5-flash"),
 		BackendCallbackUrl: getEnv("BACKEND_CALLBACK_URL", "http://localhost:3000/api/v1/receipts/callback"),
+		OcrEngine:          getEnv("OCR_ENGINE", "tesseract"),
 		TesseractPath:      getEnv("TESSERACT_PATH", "tesseract"),
+		PythonPath:         getEnv("PYTHON_PATH", "python"),
+		PaddleOcrPath:      getEnv("PADDLEOCR_PATH", ""),
 		TempDownloadDir:    getEnv("TEMP_DOWNLOAD_DIR", "temp/downloads"),
 		NvidiaApiKey:       getEnv("NVIDIA_API_KEY", ""),
 		NvidiaBaseUrl:      getEnv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
