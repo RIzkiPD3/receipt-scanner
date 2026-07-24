@@ -207,3 +207,79 @@ func TestNemotronProvider_ExtractReceipt_InvalidJSON(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
+
+func TestNemotronProvider_ExtractReceipt_SnakeCaseFormat(t *testing.T) {
+	mockResponseText := `{
+  "merchant": "Indomaret",
+  "transaction_date": "2026-07-08",
+  "items": [
+    {
+      "name": "RTE ONIGIRI HOT CHKN",
+      "quantity": 1,
+      "unit_price": 10000
+    }
+  ],
+  "subtotal": 10000,
+  "total": 10000
+}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		respPayload := chatCompletionResponse{
+			Choices: []struct {
+				Message chatMessage `json:"message"`
+			}{
+				{
+					Message: chatMessage{
+						Role:    "assistant",
+						Content: "```json\n" + mockResponseText + "\n```",
+					},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(respPayload)
+	}))
+	defer server.Close()
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	provider := NewNemotronProvider("key", server.URL, "model", server.Client(), logger)
+
+	result, err := provider.ExtractReceipt(context.Background(), "INDOMARET BANTUL KM 6.5 TOTAL 10000")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result.Merchant != "Indomaret" || result.StoreName != "Indomaret" {
+		t.Errorf("expected Merchant/StoreName Indomaret, got Merchant=%s, StoreName=%s", result.Merchant, result.StoreName)
+	}
+	if result.TransactionDate != "2026-07-08" {
+		t.Errorf("expected TransactionDate 2026-07-08, got %s", result.TransactionDate)
+	}
+	if result.Total != 10000 {
+		t.Errorf("expected Total 10000, got %f", result.Total)
+	}
+	if len(result.Items) != 1 || result.Items[0].UnitPrice != 10000 || result.Items[0].TotalPrice != 10000 {
+		t.Errorf("unexpected item contents: %+v", result.Items)
+	}
+}
+
+func TestNemotronProvider_ExtractReceipt_Timeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate long latency
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	provider := NewNemotronProvider("key", server.URL, "model", server.Client(), logger)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately to trigger timeout error path
+
+	_, err := provider.ExtractReceipt(ctx, "OCR TEXT")
+	if err == nil {
+		t.Fatal("expected timeout/cancellation error, got nil")
+	}
+}
+

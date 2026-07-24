@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"invoicego/worker/internal/client"
 	"invoicego/worker/internal/config"
@@ -50,20 +51,46 @@ func main() {
 	// 4. Inisialisasi Tesseract OCR Service
 	ocrSvc := ocrservice.NewOCRService(tesseractProvider, cfg.TempDownloadDir, logger)
 
-	// Inisialisasi PaddleOCR jika dikonfigurasi
+	imagePathFlag := flag.String("image", "", "Path to receipt image for direct OCR testing")
+	flag.Parse()
+
+	// Inisialisasi PaddleOCR Service jika dikonfigurasi atau dipanggil via CLI
 	var paddleOcrSvc *service.OCRService
 	var healthOcrProvider interface {
 		Ping(ctx context.Context) error
 	}
 	healthOcrProvider = tesseractProvider
 
-	if cfg.OcrEngine == "paddle" {
+	if cfg.OcrEngine == "paddle" || *imagePathFlag != "" {
 		logger.Info("Menginisialisasi PaddleOCR Service...",
 			"pythonPath", cfg.PythonPath,
 			"paddleOcrPath", cfg.PaddleOcrPath,
 		)
 		paddleOcrSvc = service.NewOCRService(cfg.PythonPath, cfg.PaddleOcrPath, logger)
-		healthOcrProvider = paddleOcrSvc
+		if cfg.OcrEngine == "paddle" {
+			healthOcrProvider = paddleOcrSvc
+		}
+	}
+
+	if paddleOcrSvc == nil {
+		paddleOcrSvc = service.NewOCRService(cfg.PythonPath, cfg.PaddleOcrPath, logger)
+	}
+
+	// 5. Inisialisasi Worker Service (Clean Architecture)
+	workerSvc := service.NewWorkerService(paddleOcrSvc, logger)
+
+	// Jika flag -image diberikan, jalankan OCR CLI testing flow dan keluar
+	if *imagePathFlag != "" {
+		rawText, err := workerSvc.ProcessImage(context.Background(), *imagePathFlag)
+		if err != nil {
+			fmt.Printf("Worker OCR processing failed: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("\n========== OCR RESULT ==========")
+		fmt.Println(rawText)
+		fmt.Println("================================")
+		return
 	}
 
 	// 5. Inisialisasi LLM Provider (NVIDIA Nemotron)

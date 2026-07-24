@@ -61,41 +61,54 @@ type chatCompletionResponse struct {
 
 // ExtractReceipt mengambil teks OCR mentah dan mengekstraknya menjadi objek ReceiptResult terstruktur
 func (p *NemotronProvider) ExtractReceipt(ctx context.Context, rawText string) (*model.ReceiptResult, error) {
-	if strings.TrimSpace(rawText) == "" {
+	startTime := time.Now()
+	trimmedText := strings.TrimSpace(rawText)
+	if trimmedText == "" {
 		p.logger.Warn("Teks OCR mentah kosong")
+		p.logger.Error("AI Processing Failed", "error", "empty OCR text", "duration", time.Since(startTime))
 		return nil, errors.New("empty OCR text")
 	}
 
-	systemPrompt := `You are an expert receipt parser.
+	p.logger.Info("AI Processing Started", "ocrTextLength", len(rawText))
 
-Extract receipt information into JSON only. Never explain anything. Return valid JSON.
+	systemPrompt := `You are an expert receipt parser AI. Your task is to convert raw OCR text into structured receipt JSON data.
 
-Guidelines for Indonesian receipts:
-1. A dot (.) is a thousands separator (e.g., "100.000" is 100000). A comma (,) is a decimal separator (e.g., "12.500,50" is 12500.5). Convert them correctly to plain numbers.
-2. The final "total" should be the actual amount paid by the consumer (e.g. "Dibayar Konsumen", "TOTAL", "Grand Total", "CASH").
-3. Do NOT add government subsidies (e.g. "Subsidi Pemerintah") to the total or treat them as tax. Subsidies are discount-like deductions.
-4. "subtotal" is the amount before taxes/discounts/subsidies.
-5. All numeric values in JSON must be numbers (not strings, no dots or commas inside).
+Rules & Guidelines:
+1. Extract the following fields strictly from the OCR text:
+   - merchant: name of store/merchant (string or null if absent)
+   - transaction_date: date of transaction in YYYY-MM-DD format (string or null if absent)
+   - items: array of items purchased, each item having:
+     - name: name of the product/item (string)
+     - quantity: quantity bought (number, default 1)
+     - unit_price: unit price per item (number)
+   - subtotal: subtotal amount before tax/discount (number or null)
+   - total: total final amount paid (number or null)
 
-Required JSON structure:
+2. Strict Data Accuracy:
+   - Do NOT invent or hallucinate data that is not present in the OCR text.
+   - If information cannot be confidently extracted, return null for that field.
+   - Indonesian currency format: dot (.) is thousands separator, comma (,) is decimal separator. Convert all monetary numbers to clean plain numeric values (e.g. 10.000 -> 10000).
 
+3. Output Format:
+   - Respond ONLY with valid JSON.
+   - Do NOT wrap in explanation or conversational prose.
+
+Required JSON Structure:
 {
-  "storeName": "",
-  "transactionDate": "",
-  "subtotal": 0,
-  "tax": 0,
-  "total": 0,
+  "merchant": null,
+  "transaction_date": null,
   "items": [
     {
       "name": "",
-      "quantity": 0,
-      "unitPrice": 0,
-      "totalPrice": 0
+      "quantity": 1,
+      "unit_price": 0
     }
-  ]
+  ],
+  "subtotal": null,
+  "total": null
 }`
 
-	userPrompt := fmt.Sprintf("Extract this receipt:\n\n%s", rawText)
+	userPrompt := fmt.Sprintf("Extract this OCR receipt text:\n\n%s", rawText)
 
 	reqPayload := chatCompletionRequest{
 		Model: p.modelName,
@@ -103,11 +116,12 @@ Required JSON structure:
 			{Role: "system", Content: systemPrompt},
 			{Role: "user", Content: userPrompt},
 		},
-		Temperature: 0.2, // Nilai rendah untuk hasil yang deterministik
+		Temperature: 0.1,
 	}
 
 	payloadBytes, err := json.Marshal(reqPayload)
 	if err != nil {
+		p.logger.Error("AI Processing Failed", "error", err.Error(), "duration", time.Since(startTime))
 		return nil, fmt.Errorf("failed to marshal request payload: %w", err)
 	}
 
@@ -117,20 +131,20 @@ Required JSON structure:
 	var lastErr error
 	maxRetries := 3
 
-	p.logger.Info("request started", "url", url, "model", p.modelName)
+	p.logger.Info("NVIDIA Request Sent", "url", url, "model", p.modelName)
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		if attempt > 0 {
 			p.logger.Info("retry", "attempt", attempt, "maxRetries", maxRetries, "lastError", lastErr.Error())
-			// Jeda waktu backoff sederhana sebelum mencoba kembali
 			select {
 			case <-ctx.Done():
+				p.logger.Error("AI Processing Failed", "error", ctx.Err().Error(), "duration", time.Since(startTime))
 				return nil, ctx.Err()
 			case <-time.After(time.Duration(attempt) * time.Second):
 			}
 		}
 
-		startTime := time.Now()
+		reqStart := time.Now()
 		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadBytes))
 		if err != nil {
 			lastErr = fmt.Errorf("failed to create request: %w", err)
@@ -142,13 +156,17 @@ Required JSON structure:
 
 		resp, err := p.httpClient.Do(req)
 		if err != nil {
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) || errors.Is(ctx.Err(), context.Canceled) {
+				p.logger.Error("AI Processing Failed", "error", ctx.Err().Error(), "duration", time.Since(startTime))
+				return nil, ctx.Err()
+			}
 			lastErr = fmt.Errorf("network error: %w", err)
 			p.logger.Warn("network error", "error", err.Error())
 			continue
 		}
 
-		duration := time.Since(startTime)
-		p.logger.Info("response received", "status", resp.Status, "duration", duration)
+		reqDuration := time.Since(reqStart)
+		p.logger.Info("NVIDIA Response Received", "status", resp.Status, "duration", reqDuration)
 
 		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
@@ -157,9 +175,9 @@ Required JSON structure:
 			continue
 		}
 
-		// Jika status HTTP 401 Unauthorized, langsung kembalikan error (jangan coba lagi)
 		if resp.StatusCode == http.StatusUnauthorized {
 			p.logger.Error("unauthorized: invalid NVIDIA API key")
+			p.logger.Error("AI Processing Failed", "error", "unauthorized: invalid API key", "duration", time.Since(startTime))
 			return nil, errors.New("unauthorized: invalid API key")
 		}
 
@@ -174,30 +192,41 @@ Required JSON structure:
 	}
 
 	if lastErr != nil {
+		p.logger.Error("AI Processing Failed", "error", lastErr.Error(), "duration", time.Since(startTime))
 		return nil, fmt.Errorf("all retry attempts failed: %w", lastErr)
 	}
 
 	var completionResp chatCompletionResponse
 	if err := json.Unmarshal(respBody, &completionResp); err != nil {
 		p.logger.Error("parsing failed", "error", err.Error(), "rawResponse", string(respBody))
+		p.logger.Error("AI Processing Failed", "error", err.Error(), "duration", time.Since(startTime))
 		return nil, fmt.Errorf("failed to unmarshal completion response: %w", err)
 	}
 
 	if len(completionResp.Choices) == 0 {
 		p.logger.Error("parsing failed: empty choices in response", "rawResponse", string(respBody))
+		p.logger.Error("AI Processing Failed", "error", "empty choices in response", "duration", time.Since(startTime))
 		return nil, errors.New("empty choices in response")
 	}
 
 	aiResponseText := completionResp.Choices[0].Message.Content
+	if strings.TrimSpace(aiResponseText) == "" {
+		p.logger.Error("parsing failed: empty AI response text")
+		p.logger.Error("AI Processing Failed", "error", "empty AI response text", "duration", time.Since(startTime))
+		return nil, errors.New("empty AI response text")
+	}
+
 	cleanJSON := cleanMarkdownJSON(aiResponseText)
 
 	var receiptResult model.ReceiptResult
 	if err := json.Unmarshal([]byte(cleanJSON), &receiptResult); err != nil {
 		p.logger.Error("parsing failed: invalid JSON returned by AI", "error", err.Error(), "rawResponse", aiResponseText)
+		p.logger.Error("AI Processing Failed", "error", err.Error(), "duration", time.Since(startTime))
 		return nil, fmt.Errorf("invalid JSON returned by AI: %w", err)
 	}
 
-	p.logger.Info("success", "storeName", receiptResult.StoreName, "total", receiptResult.Total)
+	totalDuration := time.Since(startTime)
+	p.logger.Info("AI Processing Completed", "merchant", receiptResult.StoreName, "total", receiptResult.Total, "duration", totalDuration)
 	return &receiptResult, nil
 }
 
@@ -205,26 +234,31 @@ Required JSON structure:
 func cleanMarkdownJSON(input string) string {
 	input = strings.TrimSpace(input)
 
-	// Hapus backticks blok markdown jika ada
-	if strings.HasPrefix(input, "```") {
+	// Clean nested or leading markdown fence tags like ```json or ```
+	for strings.HasPrefix(input, "```") {
 		if firstNewline := strings.Index(input, "\n"); firstNewline != -1 {
 			input = input[firstNewline+1:]
-		}
-		if strings.HasSuffix(input, "```") {
-			input = input[:len(input)-3]
+		} else {
+			input = strings.TrimPrefix(input, "```")
 		}
 		input = strings.TrimSpace(input)
 	}
 
-	// Untuk mengantisipasi teks tambahan di luar JSON {}
+	if strings.HasSuffix(input, "```") {
+		input = strings.TrimSuffix(input, "```")
+		input = strings.TrimSpace(input)
+	}
+
+	// Bounding to outermost JSON brackets { and }
 	firstBrace := strings.Index(input, "{")
 	lastBrace := strings.LastIndex(input, "}")
-	if firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace {
+	if firstBrace != -1 && lastBrace != -1 && lastBrace >= firstBrace {
 		input = input[firstBrace : lastBrace+1]
 	}
 
-	return input
+	return strings.TrimSpace(input)
 }
+
 
 // Ping memeriksa apakah layanan NVIDIA API dapat dijangkau
 func (p *NemotronProvider) Ping(ctx context.Context) error {
